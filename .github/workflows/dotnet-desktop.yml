@@ -1,0 +1,29 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ "main", "master", "feature/**" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore JobSearchBuilder.Tests/JobSearchBuilder.Tests.csproj
+
+      - name: Build
+        run: dotnet build JobSearchBuilder.Tests/JobSearchBuilder.Tests.csproj --no-restore --configuration Release
+
+      - name: Run tests
+        run: dotnet test JobSearchBuilder.Tests/JobSearchBuilder.Tests.csproj --no-build --configuration Release --verbosity normal
