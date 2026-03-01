@@ -57,11 +57,11 @@
             this.flpRemote = new System.Windows.Forms.FlowLayoutPanel();
             this.flpRemoteAddRow = new System.Windows.Forms.FlowLayoutPanel();
             this.pnlPreview = new System.Windows.Forms.Panel();
-            this.txtQueryPreview = new System.Windows.Forms.TextBox();
             this.flpPreviewButtons = new System.Windows.Forms.FlowLayoutPanel();
             this.btnOpenInGoogle = new System.Windows.Forms.Button();
             this.btnCopyQuery = new System.Windows.Forms.Button();
             this.lblPreviewHeader = new System.Windows.Forms.Label();
+            this.txtQueryPreview = new System.Windows.Forms.TextBox();
             this.tblTopRow = new System.Windows.Forms.TableLayoutPanel();
             this.lblProfileName = new System.Windows.Forms.Label();
             this.txtProfileName = new System.Windows.Forms.TextBox();
@@ -97,8 +97,9 @@
             this.tblMain.Padding = new System.Windows.Forms.Padding(12);
             this.tblMain.RowCount = 1;
             this.tblMain.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tblMain.Size = new System.Drawing.Size(1367, 726);
+            this.tblMain.Size = new System.Drawing.Size(1661, 737);
             this.tblMain.TabIndex = 0;
+            this.tblMain.Paint += new System.Windows.Forms.PaintEventHandler(this.tblMain_Paint);
             // 
             // pnlLeft
             // 
@@ -109,8 +110,9 @@
             this.pnlLeft.Location = new System.Drawing.Point(15, 15);
             this.pnlLeft.Name = "pnlLeft";
             this.pnlLeft.Padding = new System.Windows.Forms.Padding(0, 0, 10, 0);
-            this.pnlLeft.Size = new System.Drawing.Size(214, 696);
+            this.pnlLeft.Size = new System.Drawing.Size(214, 707);
             this.pnlLeft.TabIndex = 0;
+            this.pnlLeft.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlLeft_Paint);
             // 
             // lstProfiles
             // 
@@ -123,7 +125,7 @@
             this.lstProfiles.ItemHeight = 28;
             this.lstProfiles.Location = new System.Drawing.Point(0, 28);
             this.lstProfiles.Name = "lstProfiles";
-            this.lstProfiles.Size = new System.Drawing.Size(204, 632);
+            this.lstProfiles.Size = new System.Drawing.Size(204, 643);
             this.lstProfiles.TabIndex = 0;
             this.lstProfiles.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.lstProfiles_DrawItem);
             this.lstProfiles.SelectedIndexChanged += new System.EventHandler(this.lstProfiles_SelectedIndexChanged);
@@ -133,11 +135,12 @@
             this.flpProfileButtons.Controls.Add(this.btnNewProfile);
             this.flpProfileButtons.Controls.Add(this.btnDeleteProfile);
             this.flpProfileButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.flpProfileButtons.Location = new System.Drawing.Point(0, 660);
+            this.flpProfileButtons.Location = new System.Drawing.Point(0, 671);
             this.flpProfileButtons.Name = "flpProfileButtons";
             this.flpProfileButtons.Padding = new System.Windows.Forms.Padding(0, 6, 0, 0);
             this.flpProfileButtons.Size = new System.Drawing.Size(204, 36);
             this.flpProfileButtons.TabIndex = 1;
+            this.flpProfileButtons.Paint += new System.Windows.Forms.PaintEventHandler(this.flpProfileButtons_Paint);
             // 
             // btnNewProfile
             // 
@@ -182,6 +185,7 @@
             this.lblProfilesHeader.TabIndex = 2;
             this.lblProfilesHeader.Text = "SAVED PROFILES";
             this.lblProfilesHeader.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
+            this.lblProfilesHeader.Click += new System.EventHandler(this.lblProfilesHeader_Click);
             // 
             // pnlEditor
             // 
@@ -192,8 +196,9 @@
             this.pnlEditor.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlEditor.Location = new System.Drawing.Point(235, 15);
             this.pnlEditor.Name = "pnlEditor";
-            this.pnlEditor.Size = new System.Drawing.Size(1117, 696);
+            this.pnlEditor.Size = new System.Drawing.Size(1411, 707);
             this.pnlEditor.TabIndex = 1;
+            this.pnlEditor.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlEditor_Paint);
             // 
             // pnlScroll
             // 
@@ -203,8 +208,9 @@
             this.pnlScroll.Location = new System.Drawing.Point(0, 48);
             this.pnlScroll.Name = "pnlScroll";
             this.pnlScroll.Padding = new System.Windows.Forms.Padding(4, 0, 0, 0);
-            this.pnlScroll.Size = new System.Drawing.Size(1117, 448);
+            this.pnlScroll.Size = new System.Drawing.Size(1411, 459);
             this.pnlScroll.TabIndex = 0;
+            this.pnlScroll.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlScroll_Paint);
             // 
             // flpEditor
             // 
@@ -227,13 +233,13 @@
             this.flpEditor.Controls.Add(this.lblRemoteHeader);
             this.flpEditor.Controls.Add(this.flpRemote);
             this.flpEditor.Controls.Add(this.flpRemoteAddRow);
-            this.flpEditor.Dock = System.Windows.Forms.DockStyle.Top;
             this.flpEditor.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
             this.flpEditor.Location = new System.Drawing.Point(4, 0);
             this.flpEditor.Name = "flpEditor";
-            this.flpEditor.Size = new System.Drawing.Size(1087, 756);
+            this.flpEditor.Size = new System.Drawing.Size(1438, 784);
             this.flpEditor.TabIndex = 0;
             this.flpEditor.WrapContents = false;
+            this.flpEditor.Paint += new System.Windows.Forms.PaintEventHandler(this.flpEditor_Paint);
             // 
             // lblAtsHeader
             // 
@@ -246,6 +252,7 @@
             this.lblAtsHeader.TabIndex = 0;
             this.lblAtsHeader.Text = "ATS SOURCE GROUPS";
             this.lblAtsHeader.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
+            this.lblAtsHeader.Click += new System.EventHandler(this.lblAtsHeader_Click);
             // 
             // clbAtsGroups
             // 
@@ -255,9 +262,10 @@
             this.clbAtsGroups.Font = new System.Drawing.Font("Segoe UI", 9.5F);
             this.clbAtsGroups.Location = new System.Drawing.Point(3, 25);
             this.clbAtsGroups.Name = "clbAtsGroups";
-            this.clbAtsGroups.Size = new System.Drawing.Size(880, 92);
+            this.clbAtsGroups.Size = new System.Drawing.Size(780, 92);
             this.clbAtsGroups.TabIndex = 1;
             this.clbAtsGroups.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.clbAtsGroups_ItemCheck);
+            this.clbAtsGroups.SelectedIndexChanged += new System.EventHandler(this.clbAtsGroups_SelectedIndexChanged);
             // 
             // pnlAtsSpacer
             // 
@@ -266,6 +274,7 @@
             this.pnlAtsSpacer.Name = "pnlAtsSpacer";
             this.pnlAtsSpacer.Size = new System.Drawing.Size(880, 8);
             this.pnlAtsSpacer.TabIndex = 2;
+            this.pnlAtsSpacer.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlAtsSpacer_Paint);
             // 
             // lblStackHeader
             // 
@@ -273,6 +282,7 @@
             this.lblStackHeader.Name = "lblStackHeader";
             this.lblStackHeader.Size = new System.Drawing.Size(100, 23);
             this.lblStackHeader.TabIndex = 3;
+            this.lblStackHeader.Click += new System.EventHandler(this.lblStackHeader_Click);
             // 
             // flpStack
             // 
@@ -280,6 +290,7 @@
             this.flpStack.Name = "flpStack";
             this.flpStack.Size = new System.Drawing.Size(859, 42);
             this.flpStack.TabIndex = 4;
+            this.flpStack.Paint += new System.Windows.Forms.PaintEventHandler(this.flpStack_Paint);
             // 
             // flpStackAddRow
             // 
@@ -287,6 +298,7 @@
             this.flpStackAddRow.Name = "flpStackAddRow";
             this.flpStackAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpStackAddRow.TabIndex = 5;
+            this.flpStackAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpStackAddRow_Paint);
             // 
             // lblRolesHeader
             // 
@@ -294,6 +306,7 @@
             this.lblRolesHeader.Name = "lblRolesHeader";
             this.lblRolesHeader.Size = new System.Drawing.Size(100, 23);
             this.lblRolesHeader.TabIndex = 7;
+            this.lblRolesHeader.Click += new System.EventHandler(this.lblRolesHeader_Click);
             // 
             // flpRoles
             // 
@@ -301,6 +314,7 @@
             this.flpRoles.Name = "flpRoles";
             this.flpRoles.Size = new System.Drawing.Size(853, 45);
             this.flpRoles.TabIndex = 8;
+            this.flpRoles.Paint += new System.Windows.Forms.PaintEventHandler(this.flpRoles_Paint);
             // 
             // flpRolesAddRow
             // 
@@ -308,6 +322,7 @@
             this.flpRolesAddRow.Name = "flpRolesAddRow";
             this.flpRolesAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpRolesAddRow.TabIndex = 9;
+            this.flpRolesAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpRolesAddRow_Paint);
             // 
             // lblLocationsHeader
             // 
@@ -315,6 +330,7 @@
             this.lblLocationsHeader.Name = "lblLocationsHeader";
             this.lblLocationsHeader.Size = new System.Drawing.Size(100, 23);
             this.lblLocationsHeader.TabIndex = 11;
+            this.lblLocationsHeader.Click += new System.EventHandler(this.lblLocationsHeader_Click);
             // 
             // flpLocations
             // 
@@ -322,6 +338,7 @@
             this.flpLocations.Name = "flpLocations";
             this.flpLocations.Size = new System.Drawing.Size(853, 45);
             this.flpLocations.TabIndex = 12;
+            this.flpLocations.Paint += new System.Windows.Forms.PaintEventHandler(this.flpLocations_Paint);
             // 
             // flpLocationsAddRow
             // 
@@ -329,6 +346,7 @@
             this.flpLocationsAddRow.Name = "flpLocationsAddRow";
             this.flpLocationsAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpLocationsAddRow.TabIndex = 13;
+            this.flpLocationsAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpLocationsAddRow_Paint);
             // 
             // lblVisaHeader
             // 
@@ -336,6 +354,7 @@
             this.lblVisaHeader.Name = "lblVisaHeader";
             this.lblVisaHeader.Size = new System.Drawing.Size(100, 23);
             this.lblVisaHeader.TabIndex = 15;
+            this.lblVisaHeader.Click += new System.EventHandler(this.lblVisaHeader_Click);
             // 
             // flpVisa
             // 
@@ -343,6 +362,7 @@
             this.flpVisa.Name = "flpVisa";
             this.flpVisa.Size = new System.Drawing.Size(853, 45);
             this.flpVisa.TabIndex = 16;
+            this.flpVisa.Paint += new System.Windows.Forms.PaintEventHandler(this.flpVisa_Paint);
             // 
             // flpVisaAddRow
             // 
@@ -350,6 +370,7 @@
             this.flpVisaAddRow.Name = "flpVisaAddRow";
             this.flpVisaAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpVisaAddRow.TabIndex = 17;
+            this.flpVisaAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpVisaAddRow_Paint);
             // 
             // lblRemoteHeader
             // 
@@ -357,6 +378,7 @@
             this.lblRemoteHeader.Name = "lblRemoteHeader";
             this.lblRemoteHeader.Size = new System.Drawing.Size(100, 23);
             this.lblRemoteHeader.TabIndex = 19;
+            this.lblRemoteHeader.Click += new System.EventHandler(this.lblRemoteHeader_Click);
             // 
             // flpRemote
             // 
@@ -364,6 +386,7 @@
             this.flpRemote.Name = "flpRemote";
             this.flpRemote.Size = new System.Drawing.Size(853, 45);
             this.flpRemote.TabIndex = 20;
+            this.flpRemote.Paint += new System.Windows.Forms.PaintEventHandler(this.flpRemote_Paint);
             // 
             // flpRemoteAddRow
             // 
@@ -371,34 +394,21 @@
             this.flpRemoteAddRow.Name = "flpRemoteAddRow";
             this.flpRemoteAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpRemoteAddRow.TabIndex = 21;
+            this.flpRemoteAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpRemoteAddRow_Paint);
             // 
             // pnlPreview
             // 
             this.pnlPreview.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(45)))));
-            this.pnlPreview.Controls.Add(this.txtQueryPreview);
             this.pnlPreview.Controls.Add(this.flpPreviewButtons);
             this.pnlPreview.Controls.Add(this.lblPreviewHeader);
+            this.pnlPreview.Controls.Add(this.txtQueryPreview);
             this.pnlPreview.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.pnlPreview.Location = new System.Drawing.Point(0, 496);
+            this.pnlPreview.Location = new System.Drawing.Point(0, 507);
             this.pnlPreview.Name = "pnlPreview";
             this.pnlPreview.Padding = new System.Windows.Forms.Padding(12, 8, 12, 8);
-            this.pnlPreview.Size = new System.Drawing.Size(1117, 200);
+            this.pnlPreview.Size = new System.Drawing.Size(1411, 200);
             this.pnlPreview.TabIndex = 1;
-            // 
-            // txtQueryPreview
-            // 
-            this.txtQueryPreview.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(20)))), ((int)(((byte)(35)))));
-            this.txtQueryPreview.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.txtQueryPreview.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.txtQueryPreview.Font = new System.Drawing.Font("Courier New", 9F);
-            this.txtQueryPreview.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(160)))), ((int)(((byte)(230)))), ((int)(((byte)(160)))));
-            this.txtQueryPreview.Location = new System.Drawing.Point(12, 30);
-            this.txtQueryPreview.Multiline = true;
-            this.txtQueryPreview.Name = "txtQueryPreview";
-            this.txtQueryPreview.ReadOnly = true;
-            this.txtQueryPreview.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtQueryPreview.Size = new System.Drawing.Size(1093, 124);
-            this.txtQueryPreview.TabIndex = 0;
+            this.pnlPreview.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlPreview_Paint);
             // 
             // flpPreviewButtons
             // 
@@ -410,8 +420,9 @@
             this.flpPreviewButtons.Location = new System.Drawing.Point(12, 154);
             this.flpPreviewButtons.Name = "flpPreviewButtons";
             this.flpPreviewButtons.Padding = new System.Windows.Forms.Padding(0, 4, 0, 0);
-            this.flpPreviewButtons.Size = new System.Drawing.Size(1093, 38);
+            this.flpPreviewButtons.Size = new System.Drawing.Size(1387, 38);
             this.flpPreviewButtons.TabIndex = 1;
+            this.flpPreviewButtons.Paint += new System.Windows.Forms.PaintEventHandler(this.flpPreviewButtons_Paint);
             // 
             // btnOpenInGoogle
             // 
@@ -420,7 +431,7 @@
             this.btnOpenInGoogle.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnOpenInGoogle.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnOpenInGoogle.ForeColor = System.Drawing.Color.White;
-            this.btnOpenInGoogle.Location = new System.Drawing.Point(947, 4);
+            this.btnOpenInGoogle.Location = new System.Drawing.Point(1241, 4);
             this.btnOpenInGoogle.Margin = new System.Windows.Forms.Padding(0, 0, 6, 0);
             this.btnOpenInGoogle.Name = "btnOpenInGoogle";
             this.btnOpenInGoogle.Size = new System.Drawing.Size(140, 28);
@@ -436,7 +447,7 @@
             this.btnCopyQuery.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCopyQuery.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnCopyQuery.ForeColor = System.Drawing.Color.White;
-            this.btnCopyQuery.Location = new System.Drawing.Point(861, 4);
+            this.btnCopyQuery.Location = new System.Drawing.Point(1155, 4);
             this.btnCopyQuery.Margin = new System.Windows.Forms.Padding(0, 0, 6, 0);
             this.btnCopyQuery.Name = "btnCopyQuery";
             this.btnCopyQuery.Size = new System.Drawing.Size(80, 28);
@@ -453,9 +464,26 @@
             this.lblPreviewHeader.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(120)))), ((int)(((byte)(160)))), ((int)(((byte)(220)))));
             this.lblPreviewHeader.Location = new System.Drawing.Point(12, 8);
             this.lblPreviewHeader.Name = "lblPreviewHeader";
-            this.lblPreviewHeader.Size = new System.Drawing.Size(1093, 22);
+            this.lblPreviewHeader.Size = new System.Drawing.Size(1387, 30);
             this.lblPreviewHeader.TabIndex = 2;
             this.lblPreviewHeader.Text = "GENERATED QUERY PREVIEW";
+            this.lblPreviewHeader.Click += new System.EventHandler(this.lblPreviewHeader_Click);
+            // 
+            // txtQueryPreview
+            // 
+            this.txtQueryPreview.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(20)))), ((int)(((byte)(35)))));
+            this.txtQueryPreview.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.txtQueryPreview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtQueryPreview.Font = new System.Drawing.Font("Courier New", 9F);
+            this.txtQueryPreview.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(160)))), ((int)(((byte)(230)))), ((int)(((byte)(160)))));
+            this.txtQueryPreview.Location = new System.Drawing.Point(12, 8);
+            this.txtQueryPreview.Multiline = true;
+            this.txtQueryPreview.Name = "txtQueryPreview";
+            this.txtQueryPreview.ReadOnly = true;
+            this.txtQueryPreview.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtQueryPreview.Size = new System.Drawing.Size(1387, 184);
+            this.txtQueryPreview.TabIndex = 0;
+            this.txtQueryPreview.TextChanged += new System.EventHandler(this.txtQueryPreview_TextChanged);
             // 
             // tblTopRow
             // 
@@ -475,8 +503,9 @@
             this.tblTopRow.Padding = new System.Windows.Forms.Padding(4, 4, 130, 4);
             this.tblTopRow.RowCount = 1;
             this.tblTopRow.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tblTopRow.Size = new System.Drawing.Size(1117, 48);
+            this.tblTopRow.Size = new System.Drawing.Size(1411, 48);
             this.tblTopRow.TabIndex = 2;
+            this.tblTopRow.Paint += new System.Windows.Forms.PaintEventHandler(this.tblTopRow_Paint);
             // 
             // lblProfileName
             // 
@@ -490,6 +519,7 @@
             this.lblProfileName.TabIndex = 0;
             this.lblProfileName.Text = "Profile name";
             this.lblProfileName.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblProfileName.Click += new System.EventHandler(this.lblProfileName_Click);
             // 
             // txtProfileName
             // 
@@ -497,7 +527,7 @@
             this.txtProfileName.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
             this.txtProfileName.Location = new System.Drawing.Point(92, 7);
             this.txtProfileName.Name = "txtProfileName";
-            this.txtProfileName.Size = new System.Drawing.Size(478, 37);
+            this.txtProfileName.Size = new System.Drawing.Size(654, 37);
             this.txtProfileName.TabIndex = 1;
             this.txtProfileName.TextChanged += new System.EventHandler(this.txtProfileName_TextChanged);
             // 
@@ -506,33 +536,34 @@
             this.lblSeniority.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblSeniority.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.lblSeniority.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(80)))), ((int)(((byte)(80)))), ((int)(((byte)(100)))));
-            this.lblSeniority.Location = new System.Drawing.Point(592, 4);
+            this.lblSeniority.Location = new System.Drawing.Point(768, 4);
             this.lblSeniority.Name = "lblSeniority";
             this.lblSeniority.Padding = new System.Windows.Forms.Padding(0, 0, 6, 0);
             this.lblSeniority.Size = new System.Drawing.Size(69, 40);
             this.lblSeniority.TabIndex = 2;
             this.lblSeniority.Text = "Seniority";
             this.lblSeniority.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblSeniority.Click += new System.EventHandler(this.lblSeniority_Click);
             // 
             // cboSeniority
             // 
             this.cboSeniority.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cboSeniority.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboSeniority.Location = new System.Drawing.Point(667, 7);
+            this.cboSeniority.Location = new System.Drawing.Point(843, 7);
             this.cboSeniority.Name = "cboSeniority";
-            this.cboSeniority.Size = new System.Drawing.Size(317, 33);
+            this.cboSeniority.Size = new System.Drawing.Size(435, 33);
             this.cboSeniority.TabIndex = 3;
             this.cboSeniority.SelectedIndexChanged += new System.EventHandler(this.cboSeniority_SelectedIndexChanged);
             // 
             // btnSaveProfile
             // 
-            this.btnSaveProfile.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSaveProfile.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(22)))), ((int)(((byte)(163)))), ((int)(((byte)(74)))));
+            this.btnSaveProfile.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.btnSaveProfile.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(99)))), ((int)(((byte)(235)))));
             this.btnSaveProfile.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnSaveProfile.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSaveProfile.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnSaveProfile.ForeColor = System.Drawing.Color.White;
-            this.btnSaveProfile.Location = new System.Drawing.Point(1817, 10);
+            this.btnSaveProfile.Location = new System.Drawing.Point(1000, 95);
             this.btnSaveProfile.Name = "btnSaveProfile";
             this.btnSaveProfile.Size = new System.Drawing.Size(120, 28);
             this.btnSaveProfile.TabIndex = 3;
@@ -546,6 +577,7 @@
             this.txtAddStack.Name = "txtAddStack";
             this.txtAddStack.Size = new System.Drawing.Size(100, 26);
             this.txtAddStack.TabIndex = 0;
+            this.txtAddStack.TextChanged += new System.EventHandler(this.txtAddStack_TextChanged);
             // 
             // txtAddRole
             // 
@@ -553,6 +585,7 @@
             this.txtAddRole.Name = "txtAddRole";
             this.txtAddRole.Size = new System.Drawing.Size(100, 26);
             this.txtAddRole.TabIndex = 0;
+            this.txtAddRole.TextChanged += new System.EventHandler(this.txtAddRole_TextChanged);
             // 
             // txtAddLocation
             // 
@@ -560,6 +593,7 @@
             this.txtAddLocation.Name = "txtAddLocation";
             this.txtAddLocation.Size = new System.Drawing.Size(100, 26);
             this.txtAddLocation.TabIndex = 0;
+            this.txtAddLocation.TextChanged += new System.EventHandler(this.txtAddLocation_TextChanged);
             // 
             // txtAddVisa
             // 
@@ -567,6 +601,7 @@
             this.txtAddVisa.Name = "txtAddVisa";
             this.txtAddVisa.Size = new System.Drawing.Size(100, 26);
             this.txtAddVisa.TabIndex = 0;
+            this.txtAddVisa.TextChanged += new System.EventHandler(this.txtAddVisa_TextChanged);
             // 
             // txtAddRemote
             // 
@@ -574,11 +609,12 @@
             this.txtAddRemote.Name = "txtAddRemote";
             this.txtAddRemote.Size = new System.Drawing.Size(100, 26);
             this.txtAddRemote.TabIndex = 0;
+            this.txtAddRemote.TextChanged += new System.EventHandler(this.txtAddRemote_TextChanged);
             // 
             // MainForm
             // 
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(245)))), ((int)(((byte)(246)))), ((int)(((byte)(250)))));
-            this.ClientSize = new System.Drawing.Size(1367, 726);
+            this.ClientSize = new System.Drawing.Size(1661, 737);
             this.Controls.Add(this.tblMain);
             this.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.MinimumSize = new System.Drawing.Size(1000, 700);

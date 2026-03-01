@@ -42,6 +42,7 @@ namespace JobSearchBuilder
 
             InitializeComponent();   // designer-generated wiring
             PostInitialize();        // runtime-only: populate combos, add suggestion buttons
+            _isDirty = false;        // PostInitialize triggers change events; reset before first profile load
 
             PopulateProfileList();
             if (lstProfiles.Items.Count > 0)
@@ -55,6 +56,8 @@ namespace JobSearchBuilder
 
         private void PostInitialize()
         {
+            btnSaveProfile.BringToFront();
+            txtQueryPreview.BringToFront();  // must be index 0 so Dock=Fill is resolved last, after Top/Bottom controls claim their space
             // Seniority combo items
             foreach (string level in _config.SeniorityLevels)
                 cboSeniority.Items.Add(level);
@@ -65,6 +68,19 @@ namespace JobSearchBuilder
             foreach (AtsSourceGroup g in _config.AtsSourceGroups)
                 clbAtsGroups.Items.Add(g, false);
             clbAtsGroups.Height = (_config.AtsSourceGroups.Count * 22) + 6;
+
+            // Section headers and chip panel styling
+            ConfigureSectionHeader(lblStackHeader, "TECH STACK");
+            ConfigureSectionHeader(lblRolesHeader, "ROLES");
+            ConfigureSectionHeader(lblLocationsHeader, "LOCATIONS");
+            ConfigureSectionHeader(lblVisaHeader, "VISA FILTERS");
+            ConfigureSectionHeader(lblRemoteHeader, "REMOTE / HYBRID");
+
+            ConfigureChipPanel(flpStack);
+            ConfigureChipPanel(flpRoles);
+            ConfigureChipPanel(flpLocations);
+            ConfigureChipPanel(flpVisa);
+            ConfigureChipPanel(flpRemote);
 
             // Suggestion buttons for each keyword section
             List<string> stackSugg = new List<string> { "C#", ".NET", "ASP.NET Core", "Azure", "React", "TypeScript", "Python", "Java" };
@@ -451,6 +467,191 @@ namespace JobSearchBuilder
             List<Control> toRemove = panel.Controls.OfType<Panel>().Cast<Control>().ToList();
             foreach (Control c in toRemove)
                 panel.Controls.Remove(c);
+        }
+
+        private void flpEditor_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void tblMain_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void pnlLeft_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void flpProfileButtons_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lblProfilesHeader_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pnlEditor_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void pnlScroll_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lblAtsHeader_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void clbAtsGroups_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pnlAtsSpacer_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lblStackHeader_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void flpStack_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void flpStackAddRow_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lblRolesHeader_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void flpRoles_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void flpRolesAddRow_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lblLocationsHeader_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void flpLocations_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void flpLocationsAddRow_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lblVisaHeader_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void flpVisa_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void flpVisaAddRow_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lblRemoteHeader_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void flpRemote_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void flpRemoteAddRow_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void pnlPreview_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void txtQueryPreview_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void flpPreviewButtons_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lblPreviewHeader_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tblTopRow_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void lblProfileName_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblSeniority_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtAddStack_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtAddRole_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtAddLocation_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtAddVisa_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtAddRemote_TextChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }
