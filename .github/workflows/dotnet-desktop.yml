@@ -19,6 +19,9 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Restore packages.config dependencies (main project)
+        run: nuget restore JobSearchBuilder/JobSearchBuilder.csproj
+
       - name: Restore dependencies
         run: dotnet restore JobSearchBuilder.Tests/JobSearchBuilder.Tests.csproj
 
