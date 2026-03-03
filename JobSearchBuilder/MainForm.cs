@@ -321,19 +321,19 @@ namespace JobSearchBuilder
             }
 
             ClearChips(flpStack);
-            foreach (string k in profile.StackKeywords) AddChip(flpStack, k);
+            foreach (string k in profile.StackKeywords ?? Enumerable.Empty<string>()) AddChip(flpStack, k);
 
             ClearChips(flpRoles);
-            foreach (string k in profile.RoleKeywords) AddChip(flpRoles, k);
+            foreach (string k in profile.RoleKeywords ?? Enumerable.Empty<string>()) AddChip(flpRoles, k);
 
             ClearChips(flpLocations);
-            foreach (string k in profile.LocationFilters) AddChip(flpLocations, k);
+            foreach (string k in profile.LocationFilters ?? Enumerable.Empty<string>()) AddChip(flpLocations, k);
 
             ClearChips(flpVisa);
-            foreach (string k in profile.VisaFilters) AddChip(flpVisa, k);
+            foreach (string k in profile.VisaFilters ?? Enumerable.Empty<string>()) AddChip(flpVisa, k);
 
             ClearChips(flpRemote);
-            foreach (string k in profile.RemoteFilters) AddChip(flpRemote, k);
+            foreach (string k in profile.RemoteFilters ?? Enumerable.Empty<string>()) AddChip(flpRemote, k);
             _isLoading = false;          
             _isDirty = false;
             RebuildQuery();

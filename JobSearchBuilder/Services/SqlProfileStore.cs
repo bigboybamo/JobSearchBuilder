@@ -138,18 +138,11 @@ namespace JobSearchBuilder.Services
                     using (IDbCommand cmd = conn.CreateCommand())
                     {
                         cmd.Transaction = tx;
-                        cmd.CommandText = "INSERT INTO SearchProfiles (Name, Seniority, CreatedAt, UpdatedAt) VALUES (@Name, @Seniority, @CreatedAt, @UpdatedAt)";
+                        cmd.CommandText = "INSERT INTO SearchProfiles (Name, Seniority, CreatedAt, UpdatedAt) VALUES (@Name, @Seniority, @CreatedAt, @UpdatedAt); " + _factory.LastInsertIdSql;
                         AddParam(cmd, "@Name",      profile.Name);
                         AddParam(cmd, "@Seniority", profile.Seniority);
                         AddParam(cmd, "@CreatedAt", profile.CreatedAt);
                         AddParam(cmd, "@UpdatedAt", profile.UpdatedAt);
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    using (IDbCommand cmd = conn.CreateCommand())
-                    {
-                        cmd.Transaction = tx;
-                        cmd.CommandText = _factory.LastInsertIdSql;
                         profile.Id = Convert.ToInt32(cmd.ExecuteScalar());
                     }
 

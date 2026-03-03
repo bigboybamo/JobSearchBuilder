@@ -14,6 +14,8 @@ namespace JobSearchBuilder.Services
 
         /// <summary>
         /// SQL fragment that returns the integer ID of the last inserted row.
+        /// It is appended (with a semicolon separator) to the INSERT statement
+        /// so that both run in the same batch, keeping SCOPE_IDENTITY() valid.
         /// SQL Server: "SELECT CAST(SCOPE_IDENTITY() AS INT)"
         /// SQLite:     "SELECT last_insert_rowid()"
         /// </summary>
