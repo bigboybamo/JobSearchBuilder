@@ -3,21 +3,16 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JobSearchBuilder.Services
 {
     public static class AppSettingsLoader
     {
-        private static string SettingsPath
-        {
-            get
-            {
-                return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-            }
-        }
+        private static string SettingsPath =>
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+
+        private static string LocalSettingsPath =>
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.local.json");
 
         public static AppSettings Load()
         {
@@ -26,6 +21,15 @@ namespace JobSearchBuilder.Services
 
             string json = File.ReadAllText(SettingsPath);
             JObject root = JObject.Parse(json);
+
+            // appsettings.local.json is gitignored and can override any value in appsettings.json.
+            // Only ConnectionString is merged here; extend as needed.
+            if (File.Exists(LocalSettingsPath))
+            {
+                JObject local = JObject.Parse(File.ReadAllText(LocalSettingsPath));
+                if (local["ConnectionString"] != null)
+                    root["ConnectionString"] = local["ConnectionString"];
+            }
 
             AppSettings settings = new AppSettings();
 
@@ -60,6 +64,8 @@ namespace JobSearchBuilder.Services
                 settings.CommonLocations = ReadStringList(defaults, "CommonLocations");
             }
 
+            settings.ConnectionString = (string)root["ConnectionString"];
+
             return settings;
         }
 
@@ -79,6 +85,7 @@ namespace JobSearchBuilder.Services
     /// </summary>
     public class AppSettings
     {
+        public string ConnectionString { get; set; }
         public List<AtsSourceGroup> AtsSourceGroups { get; set; }
         public List<string> SeniorityLevels { get; set; }
         public List<string> CommonRoles { get; set; }
