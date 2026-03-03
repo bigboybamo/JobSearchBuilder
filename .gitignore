@@ -361,3 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Local settings overrides — contain machine-specific values (e.g. connection strings)
+# and must never be committed.
+appsettings.local.json

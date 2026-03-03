@@ -2,13 +2,10 @@
 using JobSearchBuilder.Services;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace JobSearchBuilder
@@ -34,11 +31,9 @@ namespace JobSearchBuilder
         public MainForm()
         {
             _config = AppSettingsLoader.Load();
-            _store = new InMemoryProfileStore();
+            _store = new SqlProfileStore(new SqlConnectionFactory(_config.ConnectionString));
             _queryBuilder = new QueryBuilder(_config.AtsSourceGroups);
             _workingProfile = new SearchProfile();
-
-            ((InMemoryProfileStore)_store).SeedDefaults();
 
             InitializeComponent();   // designer-generated wiring
             PostInitialize();        // runtime-only: populate combos, add suggestion buttons
@@ -57,7 +52,7 @@ namespace JobSearchBuilder
         private void PostInitialize()
         {
             btnSaveProfile.BringToFront();
-            txtQueryPreview.BringToFront();  // must be index 0 so Dock=Fill is resolved last, after Top/Bottom controls claim their space
+            txtQueryPreview.BringToFront(); 
             // Seniority combo items
             foreach (string level in _config.SeniorityLevels)
                 cboSeniority.Items.Add(level);
