@@ -96,6 +96,20 @@ namespace JobSearchBuilder.Tests
         }
 
         [Test]
+        public void Save_NewProfile_NullKeywordLists_DoesNotThrow()
+        {
+            SearchProfile profile = new SearchProfile { Name = "Null Keywords" };
+            profile.StackKeywords   = null;
+            profile.RoleKeywords    = null;
+            profile.LocationFilters = null;
+            profile.VisaFilters     = null;
+            profile.RemoteFilters   = null;
+
+            Assert.DoesNotThrow(() => _store.Save(profile));
+            Assert.That(profile.Id, Is.GreaterThan(0));
+        }
+
+        [Test]
         public void Save_NewProfile_PersistsAllKeywordCategories()
         {
             SearchProfile profile = new SearchProfile

@@ -138,18 +138,11 @@ namespace JobSearchBuilder.Services
                     using (IDbCommand cmd = conn.CreateCommand())
                     {
                         cmd.Transaction = tx;
-                        cmd.CommandText = "INSERT INTO SearchProfiles (Name, Seniority, CreatedAt, UpdatedAt) VALUES (@Name, @Seniority, @CreatedAt, @UpdatedAt)";
+                        cmd.CommandText = "INSERT INTO SearchProfiles (Name, Seniority, CreatedAt, UpdatedAt) VALUES (@Name, @Seniority, @CreatedAt, @UpdatedAt); " + _factory.LastInsertIdSql;
                         AddParam(cmd, "@Name",      profile.Name);
                         AddParam(cmd, "@Seniority", profile.Seniority);
                         AddParam(cmd, "@CreatedAt", profile.CreatedAt);
                         AddParam(cmd, "@UpdatedAt", profile.UpdatedAt);
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    using (IDbCommand cmd = conn.CreateCommand())
-                    {
-                        cmd.Transaction = tx;
-                        cmd.CommandText = _factory.LastInsertIdSql;
                         profile.Id = Convert.ToInt32(cmd.ExecuteScalar());
                     }
 
@@ -215,15 +208,23 @@ namespace JobSearchBuilder.Services
         {
             Action<string, IEnumerable<string>> insertCategory = (category, keywords) =>
             {
+                if (keywords == null) return;
+
                 foreach (string kw in keywords)
                 {
+                    if (string.IsNullOrWhiteSpace(kw))
+                        continue;
+
                     using (IDbCommand cmd = conn.CreateCommand())
                     {
                         cmd.Transaction = tx;
-                        cmd.CommandText = "INSERT INTO ProfileKeywords (ProfileId, Category, Keyword) VALUES (@ProfileId, @Category, @Keyword)";
+                        cmd.CommandText =
+                            "INSERT INTO ProfileKeywords (ProfileId, Category, Keyword) VALUES (@ProfileId, @Category, @Keyword)";
+
                         AddParam(cmd, "@ProfileId", profile.Id);
-                        AddParam(cmd, "@Category",  category);
-                        AddParam(cmd, "@Keyword",   kw);
+                        AddNullableParam(cmd, "@Category", category);
+                        AddParam(cmd, "@Keyword", kw);
+
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -235,7 +236,7 @@ namespace JobSearchBuilder.Services
             insertCategory("Visa",     profile.VisaFilters);
             insertCategory("Remote",   profile.RemoteFilters);
 
-            foreach (int sgId in profile.SourceGroupIds)
+            foreach (int sgId in profile.SourceGroupIds ?? Enumerable.Empty<int>())
             {
                 using (IDbCommand cmd = conn.CreateCommand())
                 {
@@ -253,6 +254,14 @@ namespace JobSearchBuilder.Services
             IDbDataParameter p = cmd.CreateParameter();
             p.ParameterName = name;
             p.Value = value;
+            cmd.Parameters.Add(p);
+        }
+
+        private static void AddNullableParam(IDbCommand cmd, string name, object value)
+        {
+            IDbDataParameter p = cmd.CreateParameter();
+            p.ParameterName = name;
+            p.Value = value ?? DBNull.Value;
             cmd.Parameters.Add(p);
         }
     }

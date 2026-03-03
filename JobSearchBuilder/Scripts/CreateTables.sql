@@ -24,8 +24,8 @@ CREATE TABLE SearchProfiles (
 CREATE TABLE ProfileKeywords (
     Id          INT IDENTITY(1,1) PRIMARY KEY,
     ProfileId   INT            NOT NULL REFERENCES SearchProfiles(Id) ON DELETE CASCADE,
-    Category    NVARCHAR(20)   NOT NULL,
-    Keyword     NVARCHAR(200)  NOT NULL
+    Category    NVARCHAR(20)   NULL,
+    Keyword     NVARCHAR(200)  NULL
 );
 
 -- Junction table for selected ATS source groups
