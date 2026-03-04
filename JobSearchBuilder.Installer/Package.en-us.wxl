@@ -1,0 +1,7 @@
+﻿<!--
+This file contains the declaration of all the localizable strings.
+-->
+<WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl" Culture="en-US">
+	<String Id="ProductName" Value="JobSearchBuilder" />
+	<String Id="Manufacturer" Value="PkHouse" />
+</WixLocalization>

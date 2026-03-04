@@ -1,0 +1,42 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <ComponentGroup Id="JobSearchBuilderComponents" Directory="INSTALLFOLDER">
+      <Files Include="..\JobSearchBuilder\bin\Release\*.exe" />
+      <Files Include="..\JobSearchBuilder\bin\Release\*.config" />
+      <Files Include="..\JobSearchBuilder\bin\Release\appsettings.json" />
+      <Files Include="..\JobSearchBuilder\bin\Release\**\*.dll" />
+      <Files Include="..\JobSearchBuilder\bin\Release\**\*.xml" />
+    </ComponentGroup>
+
+    <ComponentGroup Id="ShortcutComponents">
+      <Component Directory="ProgramMenuFolder">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="!(loc.ProductName)"
+                  Target="[INSTALLFOLDER]JobSearchBuilder.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Description="Launch JobSearchBuilder" />
+        <RemoveFolder Id="RemoveProgramMenuFolder" Directory="ProgramMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\PkHouse\JobSearchBuilder"
+                       Name="StartMenuShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+
+      <Component Directory="DesktopFolder">
+        <Shortcut Id="DesktopShortcut"
+                  Name="!(loc.ProductName)"
+                  Target="[INSTALLFOLDER]JobSearchBuilder.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Description="Launch JobSearchBuilder" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\PkHouse\JobSearchBuilder"
+                       Name="DesktopShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>
