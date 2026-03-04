@@ -16,5 +16,4 @@
   <ItemGroup>
     <ProjectReference Include="..\JobSearchBuilder\JobSearchBuilder.csproj" />
   </ItemGroup>
-
 </Project>
