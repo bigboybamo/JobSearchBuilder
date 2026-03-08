@@ -130,6 +130,19 @@ namespace JobSearchBuilder
 
         private void WireAddBox(TextBox addBox, FlowLayoutPanel chipPanel)
         {
+            // Embed the textbox inline inside the chip panel, styled to be invisible
+            addBox.BorderStyle = BorderStyle.None;
+            addBox.BackColor = Color.White;
+            addBox.ForeColor = Color.FromArgb(30, 60, 120);
+            addBox.Font = new Font("Segoe UI", 9f);
+            addBox.Width = 140;
+            addBox.Height = 20;
+            addBox.Margin = new Padding(4, 3, 4, 3);
+            chipPanel.Controls.Add(addBox);
+
+            // Clicking anywhere on the panel focuses the inline input
+            chipPanel.Click += (s, e) => addBox.Focus();
+
             addBox.KeyDown += (s, e) =>
             {
                 if (e.KeyCode == Keys.Enter && !string.IsNullOrWhiteSpace(addBox.Text))
@@ -446,6 +459,11 @@ namespace JobSearchBuilder
             chip.Controls.Add(lbl);
             chip.Controls.Add(close);
             panel.Controls.Add(chip);
+
+            // Keep inline TextBox last so it always appears after all chips
+            TextBox inlineBox = panel.Controls.OfType<TextBox>().FirstOrDefault();
+            if (inlineBox != null)
+                panel.Controls.SetChildIndex(inlineBox, panel.Controls.Count - 1);
         }
 
         private static List<string> GetChips(FlowLayoutPanel panel)
