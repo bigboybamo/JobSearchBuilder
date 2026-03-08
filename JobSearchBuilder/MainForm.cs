@@ -6,6 +6,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace JobSearchBuilder
@@ -23,6 +24,7 @@ namespace JobSearchBuilder
         private bool _isDirty;
         private bool _isLoading;
         private QueryResult _lastQueryResult;
+        private ComboBox _cboLocationPicker;
 
         // -------------------------------------------------------------------
         // Constructor
@@ -42,6 +44,8 @@ namespace JobSearchBuilder
             PopulateProfileList();
             if (lstProfiles.Items.Count > 0)
                 lstProfiles.SelectedIndex = 0;
+
+            LoadCountriesAsync();
         }
 
         // -------------------------------------------------------------------
@@ -80,22 +84,69 @@ namespace JobSearchBuilder
             // Suggestion buttons for each keyword section
             List<string> stackSugg = new List<string> { "C#", ".NET", "ASP.NET Core", "Azure", "React", "TypeScript", "Python", "Java" };
             List<string> roleSugg = new List<string>(_config.CommonRoles);
-            List<string> locationSugg = new List<string>(_config.CommonLocations);
             List<string> visaSugg = new List<string>(_config.CommonVisaTerms);
             List<string> remoteSugg = new List<string>(_config.CommonRemoteTerms);
 
             AddSuggestionButtons(flpStackAddRow, flpStack, txtAddStack, stackSugg);
             AddSuggestionButtons(flpRolesAddRow, flpRoles, txtAddRole, roleSugg);
-            AddSuggestionButtons(flpLocationsAddRow, flpLocations, txtAddLocation, locationSugg);
             AddSuggestionButtons(flpVisaAddRow, flpVisa, txtAddVisa, visaSugg);
             AddSuggestionButtons(flpRemoteAddRow, flpRemote, txtAddRemote, remoteSugg);
+
+            // Locations: searchable dropdown populated async from CountryService
+            _cboLocationPicker = new ComboBox
+            {
+                Width = 260,
+                Font = new Font("Segoe UI", 9f),
+                DropDownStyle = ComboBoxStyle.DropDown,
+                AutoCompleteMode = AutoCompleteMode.SuggestAppend,
+                AutoCompleteSource = AutoCompleteSource.CustomSource,
+                Margin = new Padding(0, 0, 8, 0)
+            };
+            _cboLocationPicker.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter && !string.IsNullOrWhiteSpace(_cboLocationPicker.Text))
+                {
+                    AddChip(flpLocations, _cboLocationPicker.Text.Trim());
+                    _cboLocationPicker.Text = string.Empty;
+                    e.SuppressKeyPress = true;
+                    MarkDirtyAndRebuild();
+                }
+            };
+            _cboLocationPicker.SelectionChangeCommitted += (s, e) =>
+            {
+                if (_cboLocationPicker.SelectedItem != null)
+                {
+                    AddChip(flpLocations, _cboLocationPicker.SelectedItem.ToString());
+                    _cboLocationPicker.SelectedIndex = -1;
+                    _cboLocationPicker.Text = string.Empty;
+                    MarkDirtyAndRebuild();
+                }
+            };
+            flpLocationsAddRow.Controls.Add(_cboLocationPicker);
 
             // Wire up Enter-key handler for each add-box
             WireAddBox(txtAddStack, flpStack);
             WireAddBox(txtAddRole, flpRoles);
-            WireAddBox(txtAddLocation, flpLocations);
             WireAddBox(txtAddVisa, flpVisa);
             WireAddBox(txtAddRemote, flpRemote);
+        }
+
+        private async void LoadCountriesAsync()
+        {
+            try
+            {
+                List<string> countries = await Task.Run(() => new CountryService().GetCountries());
+
+                AutoCompleteStringCollection source = new AutoCompleteStringCollection();
+                source.AddRange(countries.ToArray());
+                _cboLocationPicker.AutoCompleteCustomSource = source;
+
+                _cboLocationPicker.Items.AddRange(countries.ToArray());
+            }
+            catch
+            {
+                // Fall back silently — user can still type a location manually
+            }
         }
 
         private void AddSuggestionButtons(FlowLayoutPanel addRow, FlowLayoutPanel chipPanel,

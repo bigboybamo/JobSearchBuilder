@@ -60,7 +60,7 @@ namespace JobSearchBuilder.Services
                 Seniority = "Senior",
                 StackKeywords = new List<string> { "C#", ".NET", "ASP.NET Core" },
                 RoleKeywords = new List<string> { "Developer", "Engineer" },
-                LocationFilters = new List<string> { "United Kingdom", "UK", "London", "Manchester", "Leeds", "Birmingham" },
+                LocationFilters = new List<string> {"United States","United Kingdom","EMEA" },
                 VisaFilters = new List<string> { "visa sponsorship", "sponsor visa" },
                 RemoteFilters = new List<string> { "remote", "hybrid" },
                 SourceGroupIds = new List<int> { 1, 2 }
