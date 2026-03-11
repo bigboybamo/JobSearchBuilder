@@ -66,6 +66,10 @@ namespace JobSearchBuilder.Services
             if (!string.IsNullOrWhiteSpace(remoteBlock))
                 blocks.Add(remoteBlock);
 
+            string excludeBlock = BuildExcludeBlock(profile.ExcludeKeywords);
+            if (!string.IsNullOrWhiteSpace(excludeBlock))
+                blocks.Add(excludeBlock);
+
             string rawQuery = string.Join("\n", blocks);
             string inlineQuery = string.Join(" ", blocks.Select(b => b.Replace("\n", " ")));
             string googleUrl = BuildGoogleUrl(inlineQuery);
@@ -94,6 +98,18 @@ namespace JobSearchBuilder.Services
 
             IEnumerable<string> parts = domains.Select(d => "site:" + d);
             return "(\n  " + string.Join("\n  OR ", parts) + "\n)";
+        }
+
+        private static string BuildExcludeBlock(List<string> terms)
+        {
+            if (terms == null || terms.Count == 0) return string.Empty;
+
+            List<string> nonEmpty = terms.Where(t => !string.IsNullOrWhiteSpace(t)).ToList();
+            if (nonEmpty.Count == 0) return string.Empty;
+
+            // Google requires each excluded phrase as its own -"term" entry.
+            // The -(A OR B) group syntax is not reliably respected.
+            return string.Join("\n", nonEmpty.Select(t => "-" + Quote(t)));
         }
 
         private static string BuildTermBlock(List<string> terms, bool quote)

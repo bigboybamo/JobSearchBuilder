@@ -211,5 +211,75 @@ namespace JobSearchBuilder.Tests
             QueryResult result = _builder.Build(profile);
             Assert.That(result.Blocks.Count, Is.EqualTo(7));
         }
+
+        // -------------------------------------------------------------------
+        // Exclude keywords
+        // -------------------------------------------------------------------
+
+        [Test]
+        public void Build_SingleExcludeKeyword_ProducesNegatedTerm()
+        {
+            SearchProfile profile = new SearchProfile
+            {
+                ExcludeKeywords = new List<string> { "must relocate" }
+            };
+            QueryResult result = _builder.Build(profile);
+            Assert.That(result.RawQuery, Does.Contain("-"));
+            Assert.That(result.RawQuery, Does.Contain("\"must relocate\""));
+        }
+
+        [Test]
+        public void Build_MultipleExcludeKeywords_EachTermNegatedSeparately()
+        {
+            SearchProfile profile = new SearchProfile
+            {
+                ExcludeKeywords = new List<string> { "must relocate", "US only", "on-site required" }
+            };
+            QueryResult result = _builder.Build(profile);
+            Assert.That(result.RawQuery, Does.Contain("-\"must relocate\""));
+            Assert.That(result.RawQuery, Does.Contain("-\"US only\""));
+            Assert.That(result.RawQuery, Does.Contain("-\"on-site required\""));
+        }
+
+        [Test]
+        public void Build_ExcludeKeywords_DoNotAppearWithoutNegation()
+        {
+            SearchProfile profile = new SearchProfile
+            {
+                ExcludeKeywords = new List<string> { "must relocate" }
+            };
+            QueryResult result = _builder.Build(profile);
+            // term must be preceded by - not treated as a positive filter
+            Assert.That(result.RawQuery, Does.Not.Contain("(\"must relocate\")"));
+        }
+
+        [Test]
+        public void Build_ExcludeKeywordsPresent_AddsOneMoreBlock()
+        {
+            SearchProfile profileWithout = new SearchProfile
+            {
+                StackKeywords = new List<string> { "C#" }
+            };
+            SearchProfile profileWith = new SearchProfile
+            {
+                StackKeywords = new List<string> { "C#" },
+                ExcludeKeywords = new List<string> { "must relocate" }
+            };
+
+            QueryResult without = _builder.Build(profileWithout);
+            QueryResult with = _builder.Build(profileWith);
+            Assert.That(with.Blocks.Count, Is.EqualTo(without.Blocks.Count + 1));
+        }
+
+        [Test]
+        public void Build_EmptyExcludeKeywords_NoExcludeBlock()
+        {
+            SearchProfile profile = new SearchProfile
+            {
+                ExcludeKeywords = new List<string>()
+            };
+            QueryResult result = _builder.Build(profile);
+            Assert.That(result.RawQuery, Does.Not.Contain("-"));
+        }
     }
 }
