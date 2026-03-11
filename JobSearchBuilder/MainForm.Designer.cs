@@ -57,6 +57,9 @@
             this.lblRemoteHeader = new System.Windows.Forms.Label();
             this.flpRemote = new System.Windows.Forms.FlowLayoutPanel();
             this.flpRemoteAddRow = new System.Windows.Forms.FlowLayoutPanel();
+            this.lblExcludeHeader = new System.Windows.Forms.Label();
+            this.flpExclude = new System.Windows.Forms.FlowLayoutPanel();
+            this.flpExcludeAddRow = new System.Windows.Forms.FlowLayoutPanel();
             this.pnlPreview = new System.Windows.Forms.Panel();
             this.flpPreviewButtons = new System.Windows.Forms.FlowLayoutPanel();
             this.btnOpenInGoogle = new System.Windows.Forms.Button();
@@ -74,6 +77,7 @@
             this.txtAddLocation = new System.Windows.Forms.TextBox();
             this.txtAddVisa = new System.Windows.Forms.TextBox();
             this.txtAddRemote = new System.Windows.Forms.TextBox();
+            this.txtAddExclude = new System.Windows.Forms.TextBox();
             this.tblMain.SuspendLayout();
             this.pnlLeft.SuspendLayout();
             this.flpProfileButtons.SuspendLayout();
@@ -234,6 +238,9 @@
             this.flpEditor.Controls.Add(this.lblRemoteHeader);
             this.flpEditor.Controls.Add(this.flpRemote);
             this.flpEditor.Controls.Add(this.flpRemoteAddRow);
+            this.flpEditor.Controls.Add(this.lblExcludeHeader);
+            this.flpEditor.Controls.Add(this.flpExclude);
+            this.flpEditor.Controls.Add(this.flpExcludeAddRow);
             this.flpEditor.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
             this.flpEditor.Location = new System.Drawing.Point(4, 0);
             this.flpEditor.Name = "flpEditor";
@@ -396,9 +403,41 @@
             this.flpRemoteAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpRemoteAddRow.TabIndex = 21;
             this.flpRemoteAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpRemoteAddRow_Paint);
-            // 
+            //
+            // lblExcludeHeader
+            //
+            this.lblExcludeHeader.Location = new System.Drawing.Point(3, 756);
+            this.lblExcludeHeader.Name = "lblExcludeHeader";
+            this.lblExcludeHeader.Size = new System.Drawing.Size(100, 23);
+            this.lblExcludeHeader.TabIndex = 22;
+            this.lblExcludeHeader.Click += new System.EventHandler(this.lblExcludeHeader_Click);
+            //
+            // flpExclude
+            //
+            this.flpExclude.Location = new System.Drawing.Point(3, 782);
+            this.flpExclude.Name = "flpExclude";
+            this.flpExclude.Size = new System.Drawing.Size(853, 45);
+            this.flpExclude.TabIndex = 23;
+            this.flpExclude.Paint += new System.Windows.Forms.PaintEventHandler(this.flpExclude_Paint);
+            //
+            // flpExcludeAddRow
+            //
+            this.flpExcludeAddRow.Location = new System.Drawing.Point(3, 833);
+            this.flpExcludeAddRow.Name = "flpExcludeAddRow";
+            this.flpExcludeAddRow.Size = new System.Drawing.Size(853, 45);
+            this.flpExcludeAddRow.TabIndex = 24;
+            this.flpExcludeAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpExcludeAddRow_Paint);
+            //
+            // txtAddExclude
+            //
+            this.txtAddExclude.Location = new System.Drawing.Point(0, 0);
+            this.txtAddExclude.Name = "txtAddExclude";
+            this.txtAddExclude.Size = new System.Drawing.Size(100, 26);
+            this.txtAddExclude.TabIndex = 0;
+            this.txtAddExclude.TextChanged += new System.EventHandler(this.txtAddExclude_TextChanged);
+            //
             // pnlPreview
-            // 
+            //
             this.pnlPreview.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(45)))));
             this.pnlPreview.Controls.Add(this.flpPreviewButtons);
             this.pnlPreview.Controls.Add(this.lblPreviewHeader);
@@ -754,6 +793,12 @@
         private System.Windows.Forms.FlowLayoutPanel flpRemote;
         private System.Windows.Forms.FlowLayoutPanel flpRemoteAddRow;
         private System.Windows.Forms.TextBox txtAddRemote;
+
+        // Exclude section
+        private System.Windows.Forms.Label lblExcludeHeader;
+        private System.Windows.Forms.FlowLayoutPanel flpExclude;
+        private System.Windows.Forms.FlowLayoutPanel flpExcludeAddRow;
+        private System.Windows.Forms.TextBox txtAddExclude;
 
         // Preview panel
         private System.Windows.Forms.Panel pnlPreview;

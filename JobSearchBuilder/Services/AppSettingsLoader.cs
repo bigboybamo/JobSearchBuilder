@@ -62,6 +62,7 @@ namespace JobSearchBuilder.Services
                 settings.CommonVisaTerms = ReadStringList(defaults, "CommonVisaTerms");
                 settings.CommonRemoteTerms = ReadStringList(defaults, "CommonRemoteTerms");
                 settings.CommonLocations = ReadStringList(defaults, "CommonLocations");
+                settings.CommonExcludeTerms = ReadStringList(defaults, "CommonExcludeTerms");
             }
 
             settings.ConnectionString = (string)root["ConnectionString"];
@@ -92,6 +93,7 @@ namespace JobSearchBuilder.Services
         public List<string> CommonVisaTerms { get; set; }
         public List<string> CommonRemoteTerms { get; set; }
         public List<string> CommonLocations { get; set; }
+        public List<string> CommonExcludeTerms { get; set; }
 
         public AppSettings()
         {
@@ -101,6 +103,7 @@ namespace JobSearchBuilder.Services
             CommonVisaTerms = new List<string>();
             CommonRemoteTerms = new List<string>();
             CommonLocations = new List<string>();
+            CommonExcludeTerms = new List<string>();
         }
     }
 }

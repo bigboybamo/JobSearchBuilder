@@ -74,23 +74,29 @@ namespace JobSearchBuilder
             ConfigureSectionHeader(lblLocationsHeader, "LOCATIONS");
             ConfigureSectionHeader(lblVisaHeader, "VISA FILTERS");
             ConfigureSectionHeader(lblRemoteHeader, "REMOTE / HYBRID");
+            ConfigureSectionHeader(lblExcludeHeader, "EXCLUDE TERMS  (added as -\"term\" to block unwanted results)");
+            lblExcludeHeader.ForeColor = Color.FromArgb(180, 50, 50);
 
             ConfigureChipPanel(flpStack);
             ConfigureChipPanel(flpRoles);
             ConfigureChipPanel(flpLocations);
             ConfigureChipPanel(flpVisa);
             ConfigureChipPanel(flpRemote);
+            ConfigureChipPanel(flpExclude);
+            flpExclude.BackColor = Color.FromArgb(255, 248, 248);
 
             // Suggestion buttons for each keyword section
             List<string> stackSugg = new List<string> { "C#", ".NET", "ASP.NET Core", "Azure", "React", "TypeScript", "Python", "Java" };
             List<string> roleSugg = new List<string>(_config.CommonRoles);
             List<string> visaSugg = new List<string>(_config.CommonVisaTerms);
             List<string> remoteSugg = new List<string>(_config.CommonRemoteTerms);
+            List<string> excludeSugg = new List<string>(_config.CommonExcludeTerms);
 
             AddSuggestionButtons(flpStackAddRow, flpStack, txtAddStack, stackSugg);
             AddSuggestionButtons(flpRolesAddRow, flpRoles, txtAddRole, roleSugg);
             AddSuggestionButtons(flpVisaAddRow, flpVisa, txtAddVisa, visaSugg);
             AddSuggestionButtons(flpRemoteAddRow, flpRemote, txtAddRemote, remoteSugg);
+            AddSuggestionButtons(flpExcludeAddRow, flpExclude, txtAddExclude, excludeSugg, isExclude: true);
 
             // Locations: searchable dropdown populated async from CountryService
             _cboLocationPicker = new ComboBox
@@ -129,6 +135,7 @@ namespace JobSearchBuilder
             WireAddBox(txtAddRole, flpRoles);
             WireAddBox(txtAddVisa, flpVisa);
             WireAddBox(txtAddRemote, flpRemote);
+            WireAddBox(txtAddExclude, flpExclude, isExclude: true);
         }
 
         private async void LoadCountriesAsync()
@@ -150,8 +157,11 @@ namespace JobSearchBuilder
         }
 
         private void AddSuggestionButtons(FlowLayoutPanel addRow, FlowLayoutPanel chipPanel,
-                                          TextBox addBox, List<string> suggestions)
+                                          TextBox addBox, List<string> suggestions, bool isExclude = false)
         {
+            Color btnBack = isExclude ? Color.FromArgb(255, 240, 240) : Color.FromArgb(240, 243, 255);
+            Color btnFore = isExclude ? Color.FromArgb(180, 50, 50)   : Color.FromArgb(37, 99, 235);
+
             foreach (string suggestion in suggestions.Take(8))
             {
                 string sug = suggestion;
@@ -160,31 +170,31 @@ namespace JobSearchBuilder
                     Text = sug,
                     AutoSize = true,
                     FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(240, 243, 255),
-                    ForeColor = Color.FromArgb(37, 99, 235),
+                    BackColor = btnBack,
+                    ForeColor = btnFore,
                     Font = new Font("Segoe UI", 8.5f),
                     Cursor = Cursors.Hand,
                     Height = 26,
                     Padding = new Padding(6, 2, 6, 2),
                     Margin = new Padding(2, 0, 2, 0)
                 };
-                btn.FlatAppearance.BorderColor = Color.FromArgb(37, 99, 235);
+                btn.FlatAppearance.BorderColor = btnFore;
                 btn.FlatAppearance.BorderSize = 1;
                 btn.Click += (s, e) =>
                 {
-                    AddChip(chipPanel, sug);
+                    AddChip(chipPanel, sug, isExclude);
                     MarkDirtyAndRebuild();
                 };
                 addRow.Controls.Add(btn);
             }
         }
 
-        private void WireAddBox(TextBox addBox, FlowLayoutPanel chipPanel)
+        private void WireAddBox(TextBox addBox, FlowLayoutPanel chipPanel, bool isExclude = false)
         {
             // Embed the textbox inline inside the chip panel, styled to be invisible
             addBox.BorderStyle = BorderStyle.None;
-            addBox.BackColor = Color.White;
-            addBox.ForeColor = Color.FromArgb(30, 60, 120);
+            addBox.BackColor = isExclude ? Color.FromArgb(255, 248, 248) : Color.White;
+            addBox.ForeColor = isExclude ? Color.FromArgb(160, 30, 30) : Color.FromArgb(30, 60, 120);
             addBox.Font = new Font("Segoe UI", 9f);
             addBox.Width = 140;
             addBox.Height = 20;
@@ -198,7 +208,7 @@ namespace JobSearchBuilder
             {
                 if (e.KeyCode == Keys.Enter && !string.IsNullOrWhiteSpace(addBox.Text))
                 {
-                    AddChip(chipPanel, addBox.Text.Trim());
+                    AddChip(chipPanel, addBox.Text.Trim(), isExclude);
                     addBox.Clear();
                     e.SuppressKeyPress = true;
                     MarkDirtyAndRebuild();
@@ -398,7 +408,10 @@ namespace JobSearchBuilder
 
             ClearChips(flpRemote);
             foreach (string k in profile.RemoteFilters ?? Enumerable.Empty<string>()) AddChip(flpRemote, k);
-            _isLoading = false;          
+
+            ClearChips(flpExclude);
+            foreach (string k in profile.ExcludeKeywords ?? Enumerable.Empty<string>()) AddChip(flpExclude, k, isExclude: true);
+            _isLoading = false;
             _isDirty = false;
             RebuildQuery();
         }
@@ -422,6 +435,7 @@ namespace JobSearchBuilder
                 LocationFilters = GetChips(flpLocations),
                 VisaFilters = GetChips(flpVisa),
                 RemoteFilters = GetChips(flpRemote),
+                ExcludeKeywords = GetChips(flpExclude),
                 SourceGroupIds = clbAtsGroups.CheckedItems
                                      .OfType<AtsSourceGroup>()
                                      .Select(g => g.Id)
@@ -460,7 +474,7 @@ namespace JobSearchBuilder
         // Chip helpers
         // -------------------------------------------------------------------
 
-        private void AddChip(FlowLayoutPanel panel, string term)
+        private void AddChip(FlowLayoutPanel panel, string term, bool isExclude = false)
         {
             foreach (Control c in panel.Controls)
                 if (c.Tag is string t && string.Equals(t, term, StringComparison.OrdinalIgnoreCase))
@@ -468,11 +482,14 @@ namespace JobSearchBuilder
 
             int chipWidth = TextRenderer.MeasureText(term, new Font("Segoe UI", 9f)).Width + 38;
 
+            Color chipBack = isExclude ? Color.FromArgb(255, 228, 228) : Color.FromArgb(235, 240, 255);
+            Color chipFore = isExclude ? Color.FromArgb(160, 30, 30)   : Color.FromArgb(30, 60, 120);
+
             Panel chip = new Panel
             {
                 Height = 26,
                 Width = chipWidth,
-                BackColor = Color.FromArgb(235, 240, 255),
+                BackColor = chipBack,
                 Margin = new Padding(2),
                 Tag = term
             };
@@ -485,7 +502,7 @@ namespace JobSearchBuilder
                 Height = 26,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI", 9f),
-                ForeColor = Color.FromArgb(30, 60, 120),
+                ForeColor = chipFore,
                 Location = new Point(6, 0)
             };
 
@@ -714,6 +731,26 @@ namespace JobSearchBuilder
         }
 
         private void txtAddRemote_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblExcludeHeader_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void flpExclude_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void flpExcludeAddRow_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void txtAddExclude_TextChanged(object sender, EventArgs e)
         {
 
         }
