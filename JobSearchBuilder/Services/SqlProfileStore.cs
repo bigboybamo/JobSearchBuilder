@@ -100,7 +100,8 @@ namespace JobSearchBuilder.Services
                                 case "Role":     p.RoleKeywords.Add(keyword);    break;
                                 case "Location": p.LocationFilters.Add(keyword); break;
                                 case "Visa":     p.VisaFilters.Add(keyword);     break;
-                                case "Remote":   p.RemoteFilters.Add(keyword);   break;
+                                case "Remote":   p.RemoteFilters.Add(keyword);    break;
+                                case "Timezone": p.TimezoneFilters.Add(keyword); break;
                                 case "Exclude":  p.ExcludeKeywords.Add(keyword); break;
                             }
                         }
@@ -236,6 +237,7 @@ namespace JobSearchBuilder.Services
             insertCategory("Location", profile.LocationFilters);
             insertCategory("Visa",     profile.VisaFilters);
             insertCategory("Remote",   profile.RemoteFilters);
+            insertCategory("Timezone", profile.TimezoneFilters);
             insertCategory("Exclude",  profile.ExcludeKeywords);
 
             foreach (int sgId in profile.SourceGroupIds ?? Enumerable.Empty<int>())

@@ -63,6 +63,7 @@ namespace JobSearchBuilder.Services
                 settings.CommonRemoteTerms = ReadStringList(defaults, "CommonRemoteTerms");
                 settings.CommonLocations = ReadStringList(defaults, "CommonLocations");
                 settings.CommonExcludeTerms = ReadStringList(defaults, "CommonExcludeTerms");
+                settings.CommonTimezoneTerms = ReadStringList(defaults, "CommonTimezoneTerms");
             }
 
             settings.ConnectionString = (string)root["ConnectionString"];
@@ -94,6 +95,7 @@ namespace JobSearchBuilder.Services
         public List<string> CommonRemoteTerms { get; set; }
         public List<string> CommonLocations { get; set; }
         public List<string> CommonExcludeTerms { get; set; }
+        public List<string> CommonTimezoneTerms { get; set; }
 
         public AppSettings()
         {
@@ -104,6 +106,7 @@ namespace JobSearchBuilder.Services
             CommonRemoteTerms = new List<string>();
             CommonLocations = new List<string>();
             CommonExcludeTerms = new List<string>();
+            CommonTimezoneTerms = new List<string>();
         }
     }
 }

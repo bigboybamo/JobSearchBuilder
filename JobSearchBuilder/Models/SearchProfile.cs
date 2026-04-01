@@ -16,6 +16,7 @@ namespace JobSearchBuilder.Models
         public List<string> LocationFilters { get; set; }
         public List<string> VisaFilters { get; set; }
         public List<string> RemoteFilters { get; set; }
+        public List<string> TimezoneFilters { get; set; }
         public List<string> ExcludeKeywords { get; set; }
         public List<int> SourceGroupIds { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -30,6 +31,7 @@ namespace JobSearchBuilder.Models
             LocationFilters = new List<string>();
             VisaFilters = new List<string>();
             RemoteFilters = new List<string>();
+            TimezoneFilters = new List<string>();
             ExcludeKeywords = new List<string>();
             SourceGroupIds = new List<int>();
             CreatedAt = DateTime.UtcNow;

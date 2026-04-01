@@ -74,6 +74,7 @@ namespace JobSearchBuilder
             ConfigureSectionHeader(lblLocationsHeader, "LOCATIONS");
             ConfigureSectionHeader(lblVisaHeader, "VISA FILTERS");
             ConfigureSectionHeader(lblRemoteHeader, "REMOTE / HYBRID");
+            ConfigureSectionHeader(lblTimezoneHeader, "TIMEZONE");
             ConfigureSectionHeader(lblExcludeHeader, "EXCLUDE TERMS  (added as -\"term\" to block unwanted results)");
             lblExcludeHeader.ForeColor = Color.FromArgb(180, 50, 50);
 
@@ -82,6 +83,7 @@ namespace JobSearchBuilder
             ConfigureChipPanel(flpLocations);
             ConfigureChipPanel(flpVisa);
             ConfigureChipPanel(flpRemote);
+            ConfigureChipPanel(flpTimezone);
             ConfigureChipPanel(flpExclude);
             flpExclude.BackColor = Color.FromArgb(255, 248, 248);
 
@@ -91,11 +93,13 @@ namespace JobSearchBuilder
             List<string> visaSugg = new List<string>(_config.CommonVisaTerms);
             List<string> remoteSugg = new List<string>(_config.CommonRemoteTerms);
             List<string> excludeSugg = new List<string>(_config.CommonExcludeTerms);
+            List<string> timezoneSugg = new List<string>(_config.CommonTimezoneTerms);
 
             AddSuggestionButtons(flpStackAddRow, flpStack, txtAddStack, stackSugg);
             AddSuggestionButtons(flpRolesAddRow, flpRoles, txtAddRole, roleSugg);
             AddSuggestionButtons(flpVisaAddRow, flpVisa, txtAddVisa, visaSugg);
             AddSuggestionButtons(flpRemoteAddRow, flpRemote, txtAddRemote, remoteSugg);
+            AddSuggestionButtons(flpTimezoneAddRow, flpTimezone, txtAddTimezone, timezoneSugg);
             AddSuggestionButtons(flpExcludeAddRow, flpExclude, txtAddExclude, excludeSugg, isExclude: true);
 
             // Locations: searchable dropdown populated async from CountryService
@@ -135,6 +139,7 @@ namespace JobSearchBuilder
             WireAddBox(txtAddRole, flpRoles);
             WireAddBox(txtAddVisa, flpVisa);
             WireAddBox(txtAddRemote, flpRemote);
+            WireAddBox(txtAddTimezone, flpTimezone);
             WireAddBox(txtAddExclude, flpExclude, isExclude: true);
         }
 
@@ -409,6 +414,9 @@ namespace JobSearchBuilder
             ClearChips(flpRemote);
             foreach (string k in profile.RemoteFilters ?? Enumerable.Empty<string>()) AddChip(flpRemote, k);
 
+            ClearChips(flpTimezone);
+            foreach (string k in profile.TimezoneFilters ?? Enumerable.Empty<string>()) AddChip(flpTimezone, k);
+
             ClearChips(flpExclude);
             foreach (string k in profile.ExcludeKeywords ?? Enumerable.Empty<string>()) AddChip(flpExclude, k, isExclude: true);
             _isLoading = false;
@@ -435,6 +443,7 @@ namespace JobSearchBuilder
                 LocationFilters = GetChips(flpLocations),
                 VisaFilters = GetChips(flpVisa),
                 RemoteFilters = GetChips(flpRemote),
+                TimezoneFilters = GetChips(flpTimezone),
                 ExcludeKeywords = GetChips(flpExclude),
                 SourceGroupIds = clbAtsGroups.CheckedItems
                                      .OfType<AtsSourceGroup>()
@@ -548,211 +557,6 @@ namespace JobSearchBuilder
             List<Control> toRemove = panel.Controls.OfType<Panel>().Cast<Control>().ToList();
             foreach (Control c in toRemove)
                 panel.Controls.Remove(c);
-        }
-
-        private void flpEditor_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void tblMain_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void pnlLeft_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void flpProfileButtons_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void lblProfilesHeader_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void pnlEditor_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void pnlScroll_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void lblAtsHeader_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void clbAtsGroups_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void pnlAtsSpacer_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void lblStackHeader_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void flpStack_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void flpStackAddRow_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void lblRolesHeader_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void flpRoles_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void flpRolesAddRow_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void lblLocationsHeader_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void flpLocations_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void flpLocationsAddRow_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void lblVisaHeader_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void flpVisa_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void flpVisaAddRow_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void lblRemoteHeader_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void flpRemote_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void flpRemoteAddRow_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void pnlPreview_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void txtQueryPreview_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void flpPreviewButtons_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void lblPreviewHeader_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void tblTopRow_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void lblProfileName_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void lblSeniority_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void txtAddStack_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void txtAddRole_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void txtAddLocation_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void txtAddVisa_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void txtAddRemote_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void lblExcludeHeader_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void flpExclude_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void flpExcludeAddRow_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void txtAddExclude_TextChanged(object sender, EventArgs e)
-        {
-
         }
     }
 }
