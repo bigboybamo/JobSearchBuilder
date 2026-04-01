@@ -19,6 +19,7 @@ namespace JobSearchBuilder.Services
     ///   ("United Kingdom" OR UK OR London)
     ///   ("visa sponsorship" OR "tier 2")
     ///   (remote OR hybrid)
+    ///   ("UTC+0" OR "CET" OR "GMT")
     /// </summary>
     public class QueryBuilder
     {
@@ -65,6 +66,10 @@ namespace JobSearchBuilder.Services
             string remoteBlock = BuildTermBlock(profile.RemoteFilters, false);
             if (!string.IsNullOrWhiteSpace(remoteBlock))
                 blocks.Add(remoteBlock);
+
+            string timezoneBlock = BuildTermBlock(profile.TimezoneFilters, true);
+            if (!string.IsNullOrWhiteSpace(timezoneBlock))
+                blocks.Add(timezoneBlock);
 
             string excludeBlock = BuildExcludeBlock(profile.ExcludeKeywords);
             if (!string.IsNullOrWhiteSpace(excludeBlock))

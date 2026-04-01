@@ -57,6 +57,9 @@
             this.lblRemoteHeader = new System.Windows.Forms.Label();
             this.flpRemote = new System.Windows.Forms.FlowLayoutPanel();
             this.flpRemoteAddRow = new System.Windows.Forms.FlowLayoutPanel();
+            this.lblTimezoneHeader = new System.Windows.Forms.Label();
+            this.flpTimezone = new System.Windows.Forms.FlowLayoutPanel();
+            this.flpTimezoneAddRow = new System.Windows.Forms.FlowLayoutPanel();
             this.lblExcludeHeader = new System.Windows.Forms.Label();
             this.flpExclude = new System.Windows.Forms.FlowLayoutPanel();
             this.flpExcludeAddRow = new System.Windows.Forms.FlowLayoutPanel();
@@ -77,6 +80,7 @@
             this.txtAddLocation = new System.Windows.Forms.TextBox();
             this.txtAddVisa = new System.Windows.Forms.TextBox();
             this.txtAddRemote = new System.Windows.Forms.TextBox();
+            this.txtAddTimezone = new System.Windows.Forms.TextBox();
             this.txtAddExclude = new System.Windows.Forms.TextBox();
             this.tblMain.SuspendLayout();
             this.pnlLeft.SuspendLayout();
@@ -104,7 +108,6 @@
             this.tblMain.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tblMain.Size = new System.Drawing.Size(1661, 737);
             this.tblMain.TabIndex = 0;
-            this.tblMain.Paint += new System.Windows.Forms.PaintEventHandler(this.tblMain_Paint);
             // 
             // pnlLeft
             // 
@@ -117,7 +120,6 @@
             this.pnlLeft.Padding = new System.Windows.Forms.Padding(0, 0, 10, 0);
             this.pnlLeft.Size = new System.Drawing.Size(214, 707);
             this.pnlLeft.TabIndex = 0;
-            this.pnlLeft.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlLeft_Paint);
             // 
             // lstProfiles
             // 
@@ -145,7 +147,6 @@
             this.flpProfileButtons.Padding = new System.Windows.Forms.Padding(0, 6, 0, 0);
             this.flpProfileButtons.Size = new System.Drawing.Size(204, 36);
             this.flpProfileButtons.TabIndex = 1;
-            this.flpProfileButtons.Paint += new System.Windows.Forms.PaintEventHandler(this.flpProfileButtons_Paint);
             // 
             // btnNewProfile
             // 
@@ -190,7 +191,6 @@
             this.lblProfilesHeader.TabIndex = 2;
             this.lblProfilesHeader.Text = "SAVED PROFILES";
             this.lblProfilesHeader.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
-            this.lblProfilesHeader.Click += new System.EventHandler(this.lblProfilesHeader_Click);
             // 
             // pnlEditor
             // 
@@ -203,7 +203,6 @@
             this.pnlEditor.Name = "pnlEditor";
             this.pnlEditor.Size = new System.Drawing.Size(1411, 707);
             this.pnlEditor.TabIndex = 1;
-            this.pnlEditor.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlEditor_Paint);
             // 
             // pnlScroll
             // 
@@ -215,7 +214,6 @@
             this.pnlScroll.Padding = new System.Windows.Forms.Padding(4, 0, 0, 0);
             this.pnlScroll.Size = new System.Drawing.Size(1411, 459);
             this.pnlScroll.TabIndex = 0;
-            this.pnlScroll.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlScroll_Paint);
             // 
             // flpEditor
             // 
@@ -238,16 +236,18 @@
             this.flpEditor.Controls.Add(this.lblRemoteHeader);
             this.flpEditor.Controls.Add(this.flpRemote);
             this.flpEditor.Controls.Add(this.flpRemoteAddRow);
+            this.flpEditor.Controls.Add(this.lblTimezoneHeader);
+            this.flpEditor.Controls.Add(this.flpTimezone);
+            this.flpEditor.Controls.Add(this.flpTimezoneAddRow);
             this.flpEditor.Controls.Add(this.lblExcludeHeader);
             this.flpEditor.Controls.Add(this.flpExclude);
             this.flpEditor.Controls.Add(this.flpExcludeAddRow);
             this.flpEditor.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
             this.flpEditor.Location = new System.Drawing.Point(4, 0);
             this.flpEditor.Name = "flpEditor";
-            this.flpEditor.Size = new System.Drawing.Size(1438, 784);
+            this.flpEditor.Size = new System.Drawing.Size(1438, 1006);
             this.flpEditor.TabIndex = 0;
             this.flpEditor.WrapContents = false;
-            this.flpEditor.Paint += new System.Windows.Forms.PaintEventHandler(this.flpEditor_Paint);
             // 
             // lblAtsHeader
             // 
@@ -260,7 +260,6 @@
             this.lblAtsHeader.TabIndex = 0;
             this.lblAtsHeader.Text = "ATS SOURCE GROUPS";
             this.lblAtsHeader.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
-            this.lblAtsHeader.Click += new System.EventHandler(this.lblAtsHeader_Click);
             // 
             // clbAtsGroups
             // 
@@ -273,7 +272,6 @@
             this.clbAtsGroups.Size = new System.Drawing.Size(780, 92);
             this.clbAtsGroups.TabIndex = 1;
             this.clbAtsGroups.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.clbAtsGroups_ItemCheck);
-            this.clbAtsGroups.SelectedIndexChanged += new System.EventHandler(this.clbAtsGroups_SelectedIndexChanged);
             // 
             // pnlAtsSpacer
             // 
@@ -282,7 +280,6 @@
             this.pnlAtsSpacer.Name = "pnlAtsSpacer";
             this.pnlAtsSpacer.Size = new System.Drawing.Size(880, 8);
             this.pnlAtsSpacer.TabIndex = 2;
-            this.pnlAtsSpacer.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlAtsSpacer_Paint);
             // 
             // lblStackHeader
             // 
@@ -290,7 +287,6 @@
             this.lblStackHeader.Name = "lblStackHeader";
             this.lblStackHeader.Size = new System.Drawing.Size(100, 23);
             this.lblStackHeader.TabIndex = 3;
-            this.lblStackHeader.Click += new System.EventHandler(this.lblStackHeader_Click);
             // 
             // flpStack
             // 
@@ -298,7 +294,6 @@
             this.flpStack.Name = "flpStack";
             this.flpStack.Size = new System.Drawing.Size(859, 42);
             this.flpStack.TabIndex = 4;
-            this.flpStack.Paint += new System.Windows.Forms.PaintEventHandler(this.flpStack_Paint);
             // 
             // flpStackAddRow
             // 
@@ -306,7 +301,6 @@
             this.flpStackAddRow.Name = "flpStackAddRow";
             this.flpStackAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpStackAddRow.TabIndex = 5;
-            this.flpStackAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpStackAddRow_Paint);
             // 
             // lblRolesHeader
             // 
@@ -314,7 +308,6 @@
             this.lblRolesHeader.Name = "lblRolesHeader";
             this.lblRolesHeader.Size = new System.Drawing.Size(100, 23);
             this.lblRolesHeader.TabIndex = 7;
-            this.lblRolesHeader.Click += new System.EventHandler(this.lblRolesHeader_Click);
             // 
             // flpRoles
             // 
@@ -322,7 +315,6 @@
             this.flpRoles.Name = "flpRoles";
             this.flpRoles.Size = new System.Drawing.Size(853, 45);
             this.flpRoles.TabIndex = 8;
-            this.flpRoles.Paint += new System.Windows.Forms.PaintEventHandler(this.flpRoles_Paint);
             // 
             // flpRolesAddRow
             // 
@@ -330,7 +322,6 @@
             this.flpRolesAddRow.Name = "flpRolesAddRow";
             this.flpRolesAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpRolesAddRow.TabIndex = 9;
-            this.flpRolesAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpRolesAddRow_Paint);
             // 
             // lblLocationsHeader
             // 
@@ -338,7 +329,6 @@
             this.lblLocationsHeader.Name = "lblLocationsHeader";
             this.lblLocationsHeader.Size = new System.Drawing.Size(100, 23);
             this.lblLocationsHeader.TabIndex = 11;
-            this.lblLocationsHeader.Click += new System.EventHandler(this.lblLocationsHeader_Click);
             // 
             // flpLocations
             // 
@@ -346,7 +336,6 @@
             this.flpLocations.Name = "flpLocations";
             this.flpLocations.Size = new System.Drawing.Size(853, 45);
             this.flpLocations.TabIndex = 12;
-            this.flpLocations.Paint += new System.Windows.Forms.PaintEventHandler(this.flpLocations_Paint);
             // 
             // flpLocationsAddRow
             // 
@@ -354,7 +343,6 @@
             this.flpLocationsAddRow.Name = "flpLocationsAddRow";
             this.flpLocationsAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpLocationsAddRow.TabIndex = 13;
-            this.flpLocationsAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpLocationsAddRow_Paint);
             // 
             // lblVisaHeader
             // 
@@ -362,7 +350,6 @@
             this.lblVisaHeader.Name = "lblVisaHeader";
             this.lblVisaHeader.Size = new System.Drawing.Size(100, 23);
             this.lblVisaHeader.TabIndex = 15;
-            this.lblVisaHeader.Click += new System.EventHandler(this.lblVisaHeader_Click);
             // 
             // flpVisa
             // 
@@ -370,7 +357,6 @@
             this.flpVisa.Name = "flpVisa";
             this.flpVisa.Size = new System.Drawing.Size(853, 45);
             this.flpVisa.TabIndex = 16;
-            this.flpVisa.Paint += new System.Windows.Forms.PaintEventHandler(this.flpVisa_Paint);
             // 
             // flpVisaAddRow
             // 
@@ -378,7 +364,6 @@
             this.flpVisaAddRow.Name = "flpVisaAddRow";
             this.flpVisaAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpVisaAddRow.TabIndex = 17;
-            this.flpVisaAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpVisaAddRow_Paint);
             // 
             // lblRemoteHeader
             // 
@@ -386,7 +371,6 @@
             this.lblRemoteHeader.Name = "lblRemoteHeader";
             this.lblRemoteHeader.Size = new System.Drawing.Size(100, 23);
             this.lblRemoteHeader.TabIndex = 19;
-            this.lblRemoteHeader.Click += new System.EventHandler(this.lblRemoteHeader_Click);
             // 
             // flpRemote
             // 
@@ -394,7 +378,6 @@
             this.flpRemote.Name = "flpRemote";
             this.flpRemote.Size = new System.Drawing.Size(853, 45);
             this.flpRemote.TabIndex = 20;
-            this.flpRemote.Paint += new System.Windows.Forms.PaintEventHandler(this.flpRemote_Paint);
             // 
             // flpRemoteAddRow
             // 
@@ -402,42 +385,51 @@
             this.flpRemoteAddRow.Name = "flpRemoteAddRow";
             this.flpRemoteAddRow.Size = new System.Drawing.Size(853, 45);
             this.flpRemoteAddRow.TabIndex = 21;
-            this.flpRemoteAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpRemoteAddRow_Paint);
-            //
+            // 
+            // lblTimezoneHeader
+            // 
+            this.lblTimezoneHeader.Location = new System.Drawing.Point(3, 756);
+            this.lblTimezoneHeader.Name = "lblTimezoneHeader";
+            this.lblTimezoneHeader.Size = new System.Drawing.Size(100, 23);
+            this.lblTimezoneHeader.TabIndex = 22;
+            // 
+            // flpTimezone
+            // 
+            this.flpTimezone.Location = new System.Drawing.Point(3, 782);
+            this.flpTimezone.Name = "flpTimezone";
+            this.flpTimezone.Size = new System.Drawing.Size(853, 45);
+            this.flpTimezone.TabIndex = 23;
+            // 
+            // flpTimezoneAddRow
+            // 
+            this.flpTimezoneAddRow.Location = new System.Drawing.Point(3, 833);
+            this.flpTimezoneAddRow.Name = "flpTimezoneAddRow";
+            this.flpTimezoneAddRow.Size = new System.Drawing.Size(853, 45);
+            this.flpTimezoneAddRow.TabIndex = 24;
+            // 
             // lblExcludeHeader
-            //
-            this.lblExcludeHeader.Location = new System.Drawing.Point(3, 756);
+            // 
+            this.lblExcludeHeader.Location = new System.Drawing.Point(3, 881);
             this.lblExcludeHeader.Name = "lblExcludeHeader";
             this.lblExcludeHeader.Size = new System.Drawing.Size(100, 23);
-            this.lblExcludeHeader.TabIndex = 22;
-            this.lblExcludeHeader.Click += new System.EventHandler(this.lblExcludeHeader_Click);
-            //
+            this.lblExcludeHeader.TabIndex = 25;
+            // 
             // flpExclude
-            //
-            this.flpExclude.Location = new System.Drawing.Point(3, 782);
+            // 
+            this.flpExclude.Location = new System.Drawing.Point(3, 907);
             this.flpExclude.Name = "flpExclude";
             this.flpExclude.Size = new System.Drawing.Size(853, 45);
-            this.flpExclude.TabIndex = 23;
-            this.flpExclude.Paint += new System.Windows.Forms.PaintEventHandler(this.flpExclude_Paint);
-            //
+            this.flpExclude.TabIndex = 26;
+            // 
             // flpExcludeAddRow
-            //
-            this.flpExcludeAddRow.Location = new System.Drawing.Point(3, 833);
+            // 
+            this.flpExcludeAddRow.Location = new System.Drawing.Point(3, 958);
             this.flpExcludeAddRow.Name = "flpExcludeAddRow";
             this.flpExcludeAddRow.Size = new System.Drawing.Size(853, 45);
-            this.flpExcludeAddRow.TabIndex = 24;
-            this.flpExcludeAddRow.Paint += new System.Windows.Forms.PaintEventHandler(this.flpExcludeAddRow_Paint);
-            //
-            // txtAddExclude
-            //
-            this.txtAddExclude.Location = new System.Drawing.Point(0, 0);
-            this.txtAddExclude.Name = "txtAddExclude";
-            this.txtAddExclude.Size = new System.Drawing.Size(100, 26);
-            this.txtAddExclude.TabIndex = 0;
-            this.txtAddExclude.TextChanged += new System.EventHandler(this.txtAddExclude_TextChanged);
-            //
+            this.flpExcludeAddRow.TabIndex = 27;
+            // 
             // pnlPreview
-            //
+            // 
             this.pnlPreview.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(45)))));
             this.pnlPreview.Controls.Add(this.flpPreviewButtons);
             this.pnlPreview.Controls.Add(this.lblPreviewHeader);
@@ -448,7 +440,6 @@
             this.pnlPreview.Padding = new System.Windows.Forms.Padding(12, 8, 12, 8);
             this.pnlPreview.Size = new System.Drawing.Size(1411, 200);
             this.pnlPreview.TabIndex = 1;
-            this.pnlPreview.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlPreview_Paint);
             // 
             // flpPreviewButtons
             // 
@@ -462,7 +453,6 @@
             this.flpPreviewButtons.Padding = new System.Windows.Forms.Padding(0, 4, 0, 0);
             this.flpPreviewButtons.Size = new System.Drawing.Size(1387, 38);
             this.flpPreviewButtons.TabIndex = 1;
-            this.flpPreviewButtons.Paint += new System.Windows.Forms.PaintEventHandler(this.flpPreviewButtons_Paint);
             // 
             // btnOpenInGoogle
             // 
@@ -507,7 +497,6 @@
             this.lblPreviewHeader.Size = new System.Drawing.Size(1387, 30);
             this.lblPreviewHeader.TabIndex = 2;
             this.lblPreviewHeader.Text = "GENERATED QUERY PREVIEW";
-            this.lblPreviewHeader.Click += new System.EventHandler(this.lblPreviewHeader_Click);
             // 
             // txtQueryPreview
             // 
@@ -523,7 +512,6 @@
             this.txtQueryPreview.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.txtQueryPreview.Size = new System.Drawing.Size(1387, 184);
             this.txtQueryPreview.TabIndex = 0;
-            this.txtQueryPreview.TextChanged += new System.EventHandler(this.txtQueryPreview_TextChanged);
             // 
             // tblTopRow
             // 
@@ -545,7 +533,6 @@
             this.tblTopRow.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tblTopRow.Size = new System.Drawing.Size(1411, 48);
             this.tblTopRow.TabIndex = 2;
-            this.tblTopRow.Paint += new System.Windows.Forms.PaintEventHandler(this.tblTopRow_Paint);
             // 
             // lblProfileName
             // 
@@ -559,7 +546,6 @@
             this.lblProfileName.TabIndex = 0;
             this.lblProfileName.Text = "Profile name";
             this.lblProfileName.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.lblProfileName.Click += new System.EventHandler(this.lblProfileName_Click);
             // 
             // txtProfileName
             // 
@@ -583,7 +569,6 @@
             this.lblSeniority.TabIndex = 2;
             this.lblSeniority.Text = "Seniority";
             this.lblSeniority.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.lblSeniority.Click += new System.EventHandler(this.lblSeniority_Click);
             // 
             // cboSeniority
             // 
@@ -617,7 +602,6 @@
             this.txtAddStack.Name = "txtAddStack";
             this.txtAddStack.Size = new System.Drawing.Size(100, 26);
             this.txtAddStack.TabIndex = 0;
-            this.txtAddStack.TextChanged += new System.EventHandler(this.txtAddStack_TextChanged);
             // 
             // txtAddRole
             // 
@@ -625,7 +609,6 @@
             this.txtAddRole.Name = "txtAddRole";
             this.txtAddRole.Size = new System.Drawing.Size(100, 26);
             this.txtAddRole.TabIndex = 0;
-            this.txtAddRole.TextChanged += new System.EventHandler(this.txtAddRole_TextChanged);
             // 
             // txtAddLocation
             // 
@@ -633,7 +616,6 @@
             this.txtAddLocation.Name = "txtAddLocation";
             this.txtAddLocation.Size = new System.Drawing.Size(100, 26);
             this.txtAddLocation.TabIndex = 0;
-            this.txtAddLocation.TextChanged += new System.EventHandler(this.txtAddLocation_TextChanged);
             // 
             // txtAddVisa
             // 
@@ -641,7 +623,6 @@
             this.txtAddVisa.Name = "txtAddVisa";
             this.txtAddVisa.Size = new System.Drawing.Size(100, 26);
             this.txtAddVisa.TabIndex = 0;
-            this.txtAddVisa.TextChanged += new System.EventHandler(this.txtAddVisa_TextChanged);
             // 
             // txtAddRemote
             // 
@@ -649,7 +630,20 @@
             this.txtAddRemote.Name = "txtAddRemote";
             this.txtAddRemote.Size = new System.Drawing.Size(100, 26);
             this.txtAddRemote.TabIndex = 0;
-            this.txtAddRemote.TextChanged += new System.EventHandler(this.txtAddRemote_TextChanged);
+            // 
+            // txtAddTimezone
+            // 
+            this.txtAddTimezone.Location = new System.Drawing.Point(0, 0);
+            this.txtAddTimezone.Name = "txtAddTimezone";
+            this.txtAddTimezone.Size = new System.Drawing.Size(100, 26);
+            this.txtAddTimezone.TabIndex = 0;
+            // 
+            // txtAddExclude
+            // 
+            this.txtAddExclude.Location = new System.Drawing.Point(0, 0);
+            this.txtAddExclude.Name = "txtAddExclude";
+            this.txtAddExclude.Size = new System.Drawing.Size(100, 26);
+            this.txtAddExclude.TabIndex = 0;
             // 
             // MainForm
             // 
@@ -793,6 +787,12 @@
         private System.Windows.Forms.FlowLayoutPanel flpRemote;
         private System.Windows.Forms.FlowLayoutPanel flpRemoteAddRow;
         private System.Windows.Forms.TextBox txtAddRemote;
+
+        // Timezone section
+        private System.Windows.Forms.Label lblTimezoneHeader;
+        private System.Windows.Forms.FlowLayoutPanel flpTimezone;
+        private System.Windows.Forms.FlowLayoutPanel flpTimezoneAddRow;
+        private System.Windows.Forms.TextBox txtAddTimezone;
 
         // Exclude section
         private System.Windows.Forms.Label lblExcludeHeader;
