@@ -364,4 +364,10 @@ FodyWeavers.xsd
 
 # Local settings overrides — contain machine-specific values (e.g. connection strings)
 # and must never be committed.
-appsettings.local.json
+appsettings.local.json# Claude setup - never commit secrets or state
+.env
+.claude/setup.log
+.claude/validate.log
+.claude/.setup-state
+.claude/project.env
+.claude/enabled-integrations
