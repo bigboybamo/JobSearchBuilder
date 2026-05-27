@@ -179,6 +179,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Interfaces\IProfileStore.cs" />
+    <Compile Include="Interfaces\ILlmProvider.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -186,6 +187,10 @@
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Models\AtsSourceGroup.cs" />
+    <Compile Include="Models\LlmRequest.cs" />
+    <Compile Include="Models\LlmResponse.cs" />
+    <Compile Include="Models\LlmToolDefinition.cs" />
+    <Compile Include="Models\QueryProfileResult.cs" />
     <Compile Include="Models\JobResult.cs" />
     <Compile Include="Models\SearchProfile.cs" />
     <Compile Include="Models\SearchQuery.cs" />
@@ -195,9 +200,14 @@
     <Compile Include="Services\CountryService.cs" />
     <Compile Include="Services\IDbConnectionFactory.cs" />
     <Compile Include="Services\InMemoryProfileStore.cs" />
+    <Compile Include="Services\InMemoryLlmProvider.cs" />
     <Compile Include="Services\SqlConnectionFactory.cs" />
     <Compile Include="Services\SqlProfileStore.cs" />
     <Compile Include="Services\QueryBuilder.cs" />
+    <Compile Include="Services\Providers\AnthropicProvider.cs" />
+    <Compile Include="Services\Providers\GeminiProvider.cs" />
+    <Compile Include="Services\Providers\LlmProviderFactory.cs" />
+    <Compile Include="Services\Providers\OpenAiProvider.cs" />
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -240,3 +250,4 @@
     <Error Condition="!Exists('..\packages\Microsoft.Data.SqlClient.SNI.6.0.2\build\net462\Microsoft.Data.SqlClient.SNI.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Data.SqlClient.SNI.6.0.2\build\net462\Microsoft.Data.SqlClient.SNI.targets'))" />
   </Target>
 </Project>
+
