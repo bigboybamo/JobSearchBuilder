@@ -1,5 +1,7 @@
-﻿using JobSearchBuilder.Models;
+using JobSearchBuilder.Models;
+using JobSearchBuilder.Interfaces;
 using JobSearchBuilder.Services;
+using JobSearchBuilder.Services.Providers;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -13,12 +15,11 @@ namespace JobSearchBuilder
 {
     public partial class MainForm : Form
     {
-        // -------------------------------------------------------------------
-        // Services & state
-        // -------------------------------------------------------------------
         private readonly AppSettings _config;
         private readonly IProfileStore _store;
         private readonly QueryBuilder _queryBuilder;
+        private ILlmProvider _provider;
+        private Label _lblModelId;
 
         private SearchProfile _workingProfile;
         private bool _isDirty;
@@ -26,20 +27,25 @@ namespace JobSearchBuilder
         private QueryResult _lastQueryResult;
         private ComboBox _cboLocationPicker;
 
-        // -------------------------------------------------------------------
-        // Constructor
-        // -------------------------------------------------------------------
-
         public MainForm()
         {
             _config = AppSettingsLoader.Load();
             _store = new SqlProfileStore(new SqlConnectionFactory(_config.ConnectionString));
             _queryBuilder = new QueryBuilder(_config.AtsSourceGroups);
+            try
+            {
+                _provider = LlmProviderFactory.Create(_config);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("AI provider init failed: " + ex.Message);
+                _provider = null;
+            }
             _workingProfile = new SearchProfile();
 
-            InitializeComponent();   // designer-generated wiring
-            PostInitialize();        // runtime-only: populate combos, add suggestion buttons
-            _isDirty = false;        // PostInitialize triggers change events; reset before first profile load
+            InitializeComponent();   
+            PostInitialize();      
+            _isDirty = false;        
 
             PopulateProfileList();
             if (lstProfiles.Items.Count > 0)
@@ -48,11 +54,7 @@ namespace JobSearchBuilder
             LoadCountriesAsync();
         }
 
-        // -------------------------------------------------------------------
-        // PostInitialize — things that can't go in the designer because they
-        // depend on data from appsettings.json
-        // -------------------------------------------------------------------
-
+        //Post-initialization UI setup: populating dropdowns, styling, wiring up events that require controls to be created first.
         private void PostInitialize()
         {
             btnSaveProfile.BringToFront();
@@ -141,6 +143,68 @@ namespace JobSearchBuilder
             WireAddBox(txtAddRemote, flpRemote);
             WireAddBox(txtAddTimezone, flpTimezone);
             WireAddBox(txtAddExclude, flpExclude, isExclude: true);
+
+            Panel pnlFooter = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 28,
+                BackColor = Color.FromArgb(240, 242, 248),
+                Padding = new Padding(8, 0, 12, 0)
+            };
+
+            Label lblProviderCaption = new Label
+            {
+                Text = "Provider:",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8f),
+                ForeColor = Color.FromArgb(100, 100, 120),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            lblProviderCaption.Top = (pnlFooter.Height - lblProviderCaption.PreferredHeight) / 2;
+            lblProviderCaption.Left = 8;
+
+            ComboBox cboProvider = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 8f),
+                Width = 110
+            };
+            cboProvider.Items.AddRange(new object[] { "Anthropic", "OpenAI", "Gemini" });
+            int providerIdx = cboProvider.Items.IndexOf(_provider != null ? _provider.ProviderName : "Anthropic");
+            cboProvider.SelectedIndex = providerIdx >= 0 ? providerIdx : 0;
+            cboProvider.Top = (pnlFooter.Height - cboProvider.Height) / 2;
+            cboProvider.Left = lblProviderCaption.Left + lblProviderCaption.PreferredWidth + 4;
+
+            _lblModelId = new Label
+            {
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(100, 100, 120),
+                Text = _provider != null ? _provider.ModelId : string.Empty
+            };
+            _lblModelId.Top = (pnlFooter.Height - _lblModelId.PreferredHeight) / 2;
+            _lblModelId.Left = cboProvider.Left + cboProvider.Width + 10;
+
+            cboProvider.SelectedIndexChanged += (s, e) =>
+            {
+                string selected = cboProvider.SelectedItem.ToString();
+                try
+                {
+                    _provider = LlmProviderFactory.Create(_config, selected);
+                    _lblModelId.Text = _provider.ModelId;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Provider switch failed: " + ex.Message);
+                    _provider = null;
+                    _lblModelId.Text = "unavailable";
+                }
+            };
+
+            pnlFooter.Controls.Add(lblProviderCaption);
+            pnlFooter.Controls.Add(cboProvider);
+            pnlFooter.Controls.Add(_lblModelId);
+            this.Controls.Add(pnlFooter);
         }
 
         private async void LoadCountriesAsync()

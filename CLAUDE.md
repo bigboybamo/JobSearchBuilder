@@ -258,5 +258,180 @@ Steps: NuGet restore → dotnet restore → build test project → run tests.
 
 ---
 
+## AI Integration Roadmap
+
+### Progress Tracker
+- [x] Phase 1 — `feature/llm-provider`
+- [ ] Phase 2 — `feature/nl-profile-builder`
+- [ ] Phase 3 — `feature/prompt-caching`
+- [ ] Phase 4 — `feature/query-suggestions`
+- [ ] Phase 5 — `feature/query-review`
+- [ ] Phase 6 — `feature/eval-pipeline`
+- [ ] Phase 7 — `feature/batch-profiles`
+
+Mark phases `[x]` as they are merged to master. When starting a session, Claude reads the first unchecked phase as the current one.
+
+---
+
+### Provider Architecture
+
+All AI features call `ILlmProvider` — never a concrete provider directly. Switching provider means changing one config value and restarting; no service code changes.
+
+```
+ILlmProvider                        ← the only thing services know about
+    │
+    ├── AnthropicProvider            ← /v1/messages, tool_use, cache_control
+    ├── OpenAiProvider               ← /v1/chat/completions, function calling
+    └── GeminiProvider               ← /v1beta/models/.../generateContent
+```
+
+Active provider is set in `appsettings.json` under `Ai.Provider`. API keys are read from environment variables — never stored in any config file. `LlmProviderFactory.Create(settings)` is called in the `MainForm` constructor alongside existing service wiring.
+
+**Required environment variables:**
+```
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=...
+```
+Only the key for the active provider needs to be set. The others are silently empty.
+
+**Model tiers** — services request a capability tier, not a hardcoded model string:
+- `Balanced` — the only active tier; one model per provider configured in `appsettings.json`
+
+Model strings are configured in `appsettings.json` under `Ai.Models[provider].Balanced`. When the active provider changes via the UI dropdown, the matching model is resolved automatically — service code stays the same.
+
+**`appsettings.json` addition:**
+```json
+"Ai": {
+  "Provider": "Anthropic",
+  "Models": {
+    "Anthropic": { "Balanced": "claude-sonnet-4-5-20250929" },
+    "OpenAI":    { "Balanced": "gpt-4.1-mini" },
+    "Gemini":    { "Balanced": "gemini-2.5-flash" }
+  }
+}
+```
+API keys are not stored here — they are read at startup from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and `GEMINI_API_KEY` environment variables.
+
+---
+
+### New Files and Where They Live
+
+**Interfaces/**
+- `ILlmProvider.cs` — `ProviderName`, `ModelId`, `SendAsync(LlmRequest)` → `LlmResponse`
+
+**Services/Providers/**
+- `AnthropicProvider.cs` — POSTs to `/v1/messages`; handles `cache_control`, `tool_use` blocks
+- `OpenAiProvider.cs` — POSTs to `/v1/chat/completions`; handles `tool_calls` in response
+- `GeminiProvider.cs` — POSTs to `/v1beta/models/{model}:generateContent`; handles `functionCall` parts
+- `LlmProviderFactory.cs` — reads `Ai.Provider` from config, returns the correct `ILlmProvider`
+
+**Services/**
+- `NlProfileBuilderService.cs` — takes plain English role description, returns `QueryProfileResult`
+- `QuerySuggestionService.cs` — takes current chips, returns up to 5 suggested terms (Fast tier)
+- `QueryReviewService.cs` — takes assembled query string, returns issues and suggestions (Balanced tier)
+- `BatchProfileBuilderService.cs` — processes multiple descriptions at once (Phase 7)
+- `PromptLoader.cs` — reads XML prompt templates from `/prompts/` at repo root
+
+**Models/**
+- `LlmRequest.cs` — `SystemPrompt`, `UserMessage`, `Tools`, `ForceToolName`, `ModelTier`, `EnableCaching`
+- `LlmResponse.cs` — `TextContent`, `ToolCallName`, `ToolCallArguments`, `InputTokens`, `OutputTokens`, `CacheReadTokens`, `CacheWriteTokens`
+- `LlmToolDefinition.cs` — `Name`, `Description`, `InputSchema` (raw JSON string)
+- `QueryProfileResult.cs` — `Role`, `Seniority`, `TechStack`, `RemoteTerms`, `TimezoneTerms`, `ExcludeTerms`
+
+**prompts/ (repo root, outside .csproj)**
+```
+prompts/
+  nl_profile_builder/
+    v1.xml          ← active prompt
+    CHANGELOG.md    ← what changed between versions and why
+    rubric.yaml     ← Promptfoo LLM-as-judge grader
+  query_suggestions/
+    v1.xml / CHANGELOG.md / rubric.yaml
+  query_review/
+    v1.xml / CHANGELOG.md / rubric.yaml
+  evals/
+    nl_profile_builder/golden_set.json   ← 15-20 plain English inputs → expected chip values
+    query_suggestions/golden_set.json
+    query_review/golden_set.json
+  promptfooconfig.yaml
+```
+
+**Tests/**
+- `AnthropicProviderTests.cs` — verifies request serialization and response parsing against canned JSON; no real HTTP
+- `NlProfileBuilderServiceTests.cs` — uses `InMemoryLlmProvider` (hand-written stub, same pattern as `InMemoryProfileStore`)
+- `QuerySuggestionServiceTests.cs` — uses `InMemoryLlmProvider`
+
+---
+
+### Prompt Template Rules
+
+- All prompts live in `/prompts/` — never hardcoded in service classes
+- Loaded at runtime by `PromptLoader.cs`
+- XML-structured with these tags: `<instructions>`, `<context>`, `<output_format>`, `<constraints>`
+- Every prompt is paired with a `CHANGELOG.md` and a `rubric.yaml`
+- When changing a prompt: copy `v1.xml` → `v2.xml`, run Promptfoo eval, compare scores, record result in `CHANGELOG.md` before merging
+
+---
+
+### Prompt Caching Rules (Anthropic only)
+
+- Set `EnableCaching = true` on `LlmRequest` for calls with stable system prompts
+- `AnthropicProvider` wraps the system block in `cache_control: { "type": "ephemeral" }` when this flag is true
+- `OpenAiProvider` and `GeminiProvider` silently ignore `EnableCaching`
+- Dynamic content (user input, query string) goes in `messages[]` only — never in the system block
+- Any byte-level change to the system block breaks the cache — do not inject dynamic values into system prompts
+- Cache hits visible in VS Output window via `Debug.WriteLine` on `LlmResponse.CacheReadTokens`
+
+---
+
+### Phase Details
+
+#### Phase 1 — Provider Abstraction (`feature/llm-provider`)
+Build `ILlmProvider`, all three provider implementations, `LlmProviderFactory`, and the request/response DTOs. Wire the factory into `MainForm` constructor. Add `InMemoryLlmProvider` test double for use in all AI service tests. Add a status label to the form footer showing active provider and model (e.g. "Anthropic · claude-sonnet-4-20250514").
+
+Key implementation notes:
+- `AnthropicProvider`: system prompt sent as an array `[{"type":"text","text":"..."}]` — not a plain string — so `cache_control` can be appended per-element
+- `OpenAiProvider`: `tool_choice` forced call is `{"type":"function","function":{"name":"..."}}` — different shape from Anthropic
+- `GeminiProvider`: tools go in `tools[0].functionDeclarations[]` — not a top-level `tools[]` array
+- All three providers map back to the same `LlmResponse` — `CacheReadTokens` / `CacheWriteTokens` are zero on non-Anthropic providers
+
+#### Phase 2 — Natural Language Profile Builder (`feature/nl-profile-builder`)
+A `Describe Role` button on `MainForm` opens a short text input dialog. The user types a plain English description (e.g. "Senior .NET developer, fully remote, UTC+1 or UTC+2, no security clearance"). `NlProfileBuilderService` sends this to the active provider using the `nl_profile_builder/v1.xml` prompt and the `build_query_profile` tool. The tool result populates `QueryProfileResult`, which is then passed to `LoadProfileIntoUi()`. User reviews chips and hits Build Query.
+
+`tool_choice`: always forced (`ForceToolName = "build_query_profile"`) — a plain text fallback has no use here. Model tier: `Balanced`. `EnableCaching = true`.
+
+#### Phase 3 — Prompt Caching (`feature/prompt-caching`)
+Set `EnableCaching = true` on all `NlProfileBuilderService` and `QueryReviewService` requests. Verify cache hits in the VS Output window. Document what breaks the cache in `prompts/nl_profile_builder/CHANGELOG.md`. No new UI — this is an API cost optimisation.
+
+#### Phase 4 — Query Chip Suggestions (`feature/query-suggestions`)
+`QuerySuggestionService` fires on a 300ms debounce from chip `TextBox` `TextChanged` events. Uses the `Fast` tier — no XML prompt structure needed, simple system message only. Deliberately test this task with extended thinking enabled on a Balanced/Smart tier model, measure the latency and token cost, confirm quality is unchanged, and document the result in `prompts/query_suggestions/CHANGELOG.md`. This is the concrete extended-thinking anti-pattern example.
+
+#### Phase 5 — Query Review (`feature/query-review`)
+A `Review Query` button near the query preview calls `QueryReviewService` with the assembled query string. Uses `Balanced` tier and `EnableCaching = true`. Response is plain JSON (no tool use) parsed into `QueryReviewResult` with `Issues[]` and `Suggestions[]`. UI shows a green label if clean, amber bullet list if issues found.
+
+#### Phase 6 — Eval Pipeline (`feature/eval-pipeline`)
+Install Promptfoo (`npm install -g promptfoo`). Build golden sets for `nl_profile_builder` and `query_review` (15–20 test cases each). Run `promptfoo eval` from `/prompts/` against both Anthropic and OpenAI providers. Establish a versioning discipline: always run evals before merging a prompt change, always record scores in `CHANGELOG.md`.
+
+#### Phase 7 — Batch Profile Generation (`feature/batch-profiles`)
+A `Bulk Describe` dialog accepts multiple plain English descriptions (one per line). `BatchProfileBuilderService` checks the active provider: Anthropic uses `/v1/messages/batches` (one HTTP call, polls until `processing_status === "ended"`); OpenAI/Gemini use `Task.WhenAll` for parallel async calls. Results shown in a list with `Apply to Profile` and `Save as New Profile` buttons per result.
+
+---
+
+### AI Integration — Always Do
+- Call `ILlmProvider` from services — never instantiate a provider directly
+- Load prompts from `/prompts/` via `PromptLoader` — never hardcode prompt text in a service
+- Use `ModelTier` strings (`Fast`, `Balanced`, `Smart`) — never hardcode model IDs in services
+- Set `EnableCaching = true` on any request whose system prompt does not change between calls
+- Write a test using `InMemoryLlmProvider` for every new AI service method
+- Run `promptfoo eval` before merging any change to a prompt file
+
+### AI Integration — Never Do
+- Inject dynamic user content into the system prompt block — it breaks caching
+- Hardcode a model ID string (e.g. `"claude-sonnet-4-20250514"`) in a service class — use `ModelTier`
+- Call a provider implementation directly from `MainForm` — always go through `ILlmProvider`
+- Leave prompt text inline in C# — it belongs in `/prompts/*.xml`
+
+
 *Last updated: 2026-04-06*  
 *Maintained by: bigboybamo*
