@@ -1,152 +1,364 @@
-# Plan: Company Career Pages Integration
+# Phase 1 — Provider Abstraction: Implementation Plan
 
-## Context
-
-The app builds Google `site:` filter queries targeting ATS platforms. The user wants to also target specific company career pages directly — sourced from the llms.txt directory at https://directory.llmstxt.cloud (tech-forward companies: AI, dev tools, infrastructure, etc.). The company JSON data is available at:
-
-`https://raw.githubusercontent.com/thedaviddias/llms-txt-hub/main/data/websites.json`
-
-Each entry has `name`, `domain`, `category`. There are 400+ companies — users must pick specific ones (Google query length limits prevent using all).
-
-## Approach
-
-Autocomplete company picker (mirrors the location picker pattern) → chips store domain in Tag → domains merged into the existing `site:` block alongside ATS groups.
+## Goal
+Build `ILlmProvider`, three provider implementations (Anthropic, OpenAI, Gemini),
+`LlmProviderFactory`, request/response DTOs, and wire everything into `MainForm`.
+Add `InMemoryLlmProvider` test double and `AnthropicProviderTests`.
 
 ---
 
 ## Files to Create
 
-### `JobSearchBuilder/Models/CompanyEntry.cs`
-Simple POCO: `Name`, `Domain`, `Category` properties. `ToString()` returns `Name`.
+### Models (JobSearchBuilder/Models/)
 
-### `JobSearchBuilder/Services/CompanyService.cs`
-Follow `CountryService.cs` exactly:
-- Fetch from GitHub raw JSON URL using `WebClient.DownloadString()`
-- Cache to `companies.json` in `AppDomain.CurrentDomain.BaseDirectory`
-- Return `List<CompanyEntry>` sorted by Name
-- Constructor takes `(string cacheFilePath, Func<string> fetchJson)` for testability
-- `ParseApiResponse(string json)` — handle both `JArray` root and `{ "websites": [...] }` root defensively
-- `ParseCache(string json)` — reads the slimmed-down cached format `[{name, domain, category}]`
+#### `LlmRequest.cs`
+```csharp
+public class LlmRequest
+{
+    public string SystemPrompt { get; set; }
+    public string UserMessage { get; set; }
+    public List<LlmToolDefinition> Tools { get; set; }
+    public string ForceToolName { get; set; }
+    public string ModelTier { get; set; }      // "Fast" | "Balanced" | "Smart"
+    public bool EnableCaching { get; set; }
+}
+```
+
+#### `LlmResponse.cs`
+```csharp
+public class LlmResponse
+{
+    public string TextContent { get; set; }
+    public string ToolCallName { get; set; }
+    public string ToolCallArguments { get; set; }
+    public int InputTokens { get; set; }
+    public int OutputTokens { get; set; }
+    public int CacheReadTokens { get; set; }
+    public int CacheWriteTokens { get; set; }
+}
+```
+
+#### `LlmToolDefinition.cs`
+```csharp
+public class LlmToolDefinition
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public string InputSchema { get; set; }    // raw JSON string
+}
+```
+
+#### `QueryProfileResult.cs`
+```csharp
+public class QueryProfileResult
+{
+    public string Role { get; set; }
+    public string Seniority { get; set; }
+    public List<string> TechStack { get; set; }
+    public List<string> RemoteTerms { get; set; }
+    public List<string> TimezoneTerms { get; set; }
+    public List<string> ExcludeTerms { get; set; }
+}
+```
+
+---
+
+### Interfaces (JobSearchBuilder/Interfaces/)
+
+#### `ILlmProvider.cs`
+```csharp
+public interface ILlmProvider
+{
+    string ProviderName { get; }
+    string ModelId { get; }
+    Task<LlmResponse> SendAsync(LlmRequest request);
+}
+```
+
+---
+
+### Services/Providers/ (new folder)
+
+#### `AnthropicProvider.cs`
+- POST to `https://api.anthropic.com/v1/messages`
+- Headers: `x-api-key`, `anthropic-version: 2023-06-01`, `anthropic-beta: prompt-caching-2024-07-31`
+- System prompt sent as array `[{"type":"text","text":"..."}]` — NOT a plain string
+- When `EnableCaching = true`, append `"cache_control": {"type":"ephemeral"}` to the system block
+- Tool choice forced: `{"type":"tool","name":"..."}`
+- Response: parse `content[]` for `type=text` -> `TextContent`, `type=tool_use` -> `ToolCallName` + `ToolCallArguments`
+- Usage: `input_tokens`, `output_tokens`, `cache_read_input_tokens` -> `CacheReadTokens`, `cache_creation_input_tokens` -> `CacheWriteTokens`
+- `Debug.WriteLine` cache hit when `CacheReadTokens > 0`
+- Constructor accepts optional `HttpMessageHandler handler = null` for test injection
+- `ModelId` returns `_settings.GetModelId("Balanced")`
+
+#### `OpenAiProvider.cs`
+- POST to `https://api.openai.com/v1/chat/completions`
+- Header: `Authorization: Bearer {apiKey}`
+- System prompt goes in `messages[0]` with `"role":"system"`
+- Tool choice forced: `{"type":"function","function":{"name":"..."}}`
+- Schema key is `"parameters"` (not `"input_schema"`)
+- Response: `choices[0].message.content` -> `TextContent`, `choices[0].message.tool_calls[0].function` -> name/arguments
+- Usage: `prompt_tokens` -> `InputTokens`, `completion_tokens` -> `OutputTokens`
+- `CacheReadTokens` / `CacheWriteTokens` always 0
+- Constructor accepts optional `HttpMessageHandler handler = null`
+
+#### `GeminiProvider.cs`
+- POST to `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}`
+- No auth header — API key is a query parameter
+- System prompt: `"system_instruction": {"parts": [{"text":"..."}]}`
+- Tools: `"tools": [{"functionDeclarations": [...]}]` — NOT top-level `tools[]`
+- Tool config forced: `{"function_calling_config": {"mode":"ANY","allowed_function_names":["..."]}}`
+- Schema key is `"parameters"` (same shape as OpenAI)
+- Response: `candidates[0].content.parts[]` — check for `text` or `functionCall`
+- Usage: `usageMetadata.promptTokenCount` -> `InputTokens`, `candidatesTokenCount` -> `OutputTokens`
+- Constructor accepts optional `HttpMessageHandler handler = null`
+
+#### `LlmProviderFactory.cs`
+```csharp
+public static class LlmProviderFactory
+{
+    // providerOverride: if supplied, ignores settings.Ai.Provider and uses this name instead.
+    // This is what the UI dropdown calls when the user switches providers at runtime.
+    public static ILlmProvider Create(AppSettings settings, string providerOverride = null)
+    // throws InvalidOperationException if Ai section missing or provider unknown
+}
+```
+
+---
+
+### Services/ (existing folder)
+
+#### `InMemoryLlmProvider.cs`
+Test double — same pattern as `InMemoryProfileStore`:
+```csharp
+public class InMemoryLlmProvider : ILlmProvider
+{
+    public string ProviderName => "InMemory";
+    public string ModelId => "test-model";
+    public LlmResponse NextResponse { get; set; }
+    public LlmRequest LastRequest { get; private set; }
+    public Task<LlmResponse> SendAsync(LlmRequest request) { ... }
+}
+```
 
 ---
 
 ## Files to Modify
 
-### `JobSearchBuilder/Models/SearchProfile.cs`
-- Add `public List<string> CompanyDomains { get; set; }`
-- Initialize in constructor: `CompanyDomains = new List<string>();`
+### `Services/AppSettingsLoader.cs`
 
-### `JobSearchBuilder/Services/QueryBuilder.cs`
-Change `BuildSiteBlock` signature:
+**Add `AiSettings` class** (same file, below `AppSettings`):
 ```csharp
-private string BuildSiteBlock(List<int> groupIds, List<string> companyDomains)
-```
-Inside: collect ATS domains first, then append company domains (dedup via `StringComparer.OrdinalIgnoreCase`). Update call site in `Build()`:
-```csharp
-string siteBlock = BuildSiteBlock(profile.SourceGroupIds, profile.CompanyDomains);
-```
-
-### `JobSearchBuilder/Services/SqlProfileStore.cs`
-- **Read** (`LoadProfiles` switch): add `case "CompanyDomain": p.CompanyDomains.Add(keyword); break;`
-- **Write** (`InsertKeywordsAndGroups`): add `insertCategory("CompanyDomain", profile.CompanyDomains);`
-- No schema changes needed — `ProfileKeywords.Category` already accepts any string
-
-### `JobSearchBuilder/MainForm.Designer.cs`
-Add three controls in `flpEditor`, positioned after the ATS groups spacer and before the Stack section:
-```
-lblCompaniesHeader  (Label, matches other section headers)
-flpCompanies        (FlowLayoutPanel, matches other chip panels)
-flpCompaniesAddRow  (FlowLayoutPanel, matches other add-row panels)
-```
-Add field declarations at the bottom of the partial class.
-
-### `JobSearchBuilder/MainForm.cs`
-
-**New fields:**
-```csharp
-private ComboBox _cboCompanyPicker;
-private List<CompanyEntry> _allCompanies;
-```
-
-**`PostInitialize()`** additions:
-- `ConfigureSectionHeader(lblCompaniesHeader, "COMPANY CAREER PAGES")`
-- `ConfigureChipPanel(flpCompanies)`
-- Build `_cboCompanyPicker` (same style as `_cboLocationPicker`): `Width=300`, `DropDownStyle=DropDown`, `AutoCompleteMode=SuggestAppend`, `AutoCompleteSource=CustomSource`
-- Wire `KeyDown` (Enter) → `AddCompanyChip` + `MarkDirtyAndRebuild`
-- Wire `SelectionChangeCommitted` → `AddCompanyChip(entry.Name, entry.Domain)` + `MarkDirtyAndRebuild`
-- Add picker to `flpCompaniesAddRow`
-
-**New `AddCompanyChip(string displayName, string domain = null)`:**
-- If `domain == null`: lookup in `_allCompanies` by name, fallback to using `displayName` as domain
-- **Key difference from `AddChip`**: `chip.Tag = domain` so `GetChips(flpCompanies)` returns domains directly
-- Dedup by `chip.Tag` (domain)
-- Chip colors: `BackColor = Color.FromArgb(235, 240, 255)`, `ForeColor = Color.FromArgb(30, 60, 120)`
-
-**New `LoadCompaniesAsync()`** (mirrors `LoadCountriesAsync`):
-```csharp
-private async void LoadCompaniesAsync()
+public class AiSettings
 {
+    public string Provider { get; set; }
+    public Dictionary<string, string> Models { get; set; }
+    public Dictionary<string, string> ApiKeys { get; set; }
+
+    public string GetModelId(string tier) { ... }    // returns "" if not found
+    public string GetApiKey(string provider) { ... } // returns "" if not found
+}
+```
+
+**Add to `AppSettings`:**
+```csharp
+public AiSettings Ai { get; set; }
+```
+
+**In `AppSettingsLoader.Load()`:**
+1. Extend local-settings merge to also overlay `Ai.ApiKeys` from `appsettings.local.json`
+2. Parse the `Ai` section: `Provider`, `Models` dict, `ApiKeys` dict
+
+---
+
+### `appsettings.json`
+
+Add the `Ai` block at the top level — no API keys here:
+```json
+"Ai": {
+  "Provider": "Anthropic",
+  "Models": {
+    "Anthropic": { "Balanced": "claude-sonnet-4-5-20250929" },
+    "OpenAI":    { "Balanced": "gpt-4.1-mini" },
+    "Gemini":    { "Balanced": "gemini-2.5-flash" }
+  }
+}
+```
+
+API keys are read from environment variables at startup:
+- `ANTHROPIC_API_KEY`
+- `OPENAI_API_KEY`
+- `GEMINI_API_KEY`
+
+Only the key for the active provider needs to be set.
+
+---
+
+### `MainForm.cs`
+
+**Add fields** (`_provider` is NOT readonly — it is reassigned when the user switches):
+```csharp
+private ILlmProvider _provider;
+private Label _lblModelId;           // updated whenever _provider changes
+```
+
+**Add usings:**
+```csharp
+using JobSearchBuilder.Interfaces;
+using JobSearchBuilder.Services.Providers;
+```
+
+**In constructor**, after `_queryBuilder = ...`:
+```csharp
+try
+{
+    _provider = LlmProviderFactory.Create(_config);
+}
+catch (Exception ex)
+{
+    Debug.WriteLine("AI provider init failed: " + ex.Message);
+    _provider = null;
+}
+```
+
+**In `PostInitialize()`**, at the end — replace the single status label with a footer panel
+containing a provider dropdown:
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│  Provider:  [ Anthropic ▼ ]   claude-sonnet-4-20250514          (right-pad)│
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+```csharp
+Panel pnlFooter = new Panel
+{
+    Dock = DockStyle.Bottom,
+    Height = 28,
+    BackColor = Color.FromArgb(240, 242, 248),
+    Padding = new Padding(8, 0, 12, 0)
+};
+
+Label lblProviderCaption = new Label
+{
+    Text = "Provider:",
+    AutoSize = true,
+    Font = new Font("Segoe UI", 8f),
+    ForeColor = Color.FromArgb(100, 100, 120),
+    TextAlign = ContentAlignment.MiddleLeft
+};
+lblProviderCaption.Top = (pnlFooter.Height - lblProviderCaption.PreferredHeight) / 2;
+lblProviderCaption.Left = 8;
+
+ComboBox cboProvider = new ComboBox
+{
+    DropDownStyle = ComboBoxStyle.DropDownList,
+    Font = new Font("Segoe UI", 8f),
+    Width = 110
+};
+cboProvider.Items.AddRange(new object[] { "Anthropic", "OpenAI", "Gemini" });
+// Select whichever provider is currently active
+int providerIdx = cboProvider.Items.IndexOf(_provider != null ? _provider.ProviderName : "Anthropic");
+cboProvider.SelectedIndex = providerIdx >= 0 ? providerIdx : 0;
+cboProvider.Top = (pnlFooter.Height - cboProvider.Height) / 2;
+cboProvider.Left = lblProviderCaption.Left + lblProviderCaption.PreferredWidth + 4;
+
+_lblModelId = new Label
+{
+    AutoSize = true,
+    Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+    ForeColor = Color.FromArgb(100, 100, 120),
+    Text = _provider != null ? _provider.ModelId : string.Empty
+};
+_lblModelId.Top = (pnlFooter.Height - _lblModelId.PreferredHeight) / 2;
+_lblModelId.Left = cboProvider.Left + cboProvider.Width + 10;
+
+cboProvider.SelectedIndexChanged += (s, e) =>
+{
+    string selected = cboProvider.SelectedItem.ToString();
     try
     {
-        _allCompanies = await Task.Run(() => new CompanyService().GetCompanies());
-        var source = new AutoCompleteStringCollection();
-        source.AddRange(_allCompanies.Select(c => c.Name).ToArray());
-        _cboCompanyPicker.AutoCompleteCustomSource = source;
-        _cboCompanyPicker.Items.AddRange(_allCompanies.Cast<object>().ToArray());
+        _provider = LlmProviderFactory.Create(_config, selected);
+        _lblModelId.Text = _provider.ModelId;
     }
-    catch { /* fail silently — user can type domain manually */ }
-}
-```
-Call from constructor after `LoadCountriesAsync()`.
+    catch (Exception ex)
+    {
+        Debug.WriteLine("Provider switch failed: " + ex.Message);
+        _provider = null;
+        _lblModelId.Text = "unavailable";
+    }
+};
 
-**`LoadProfileIntoUi()`** — after `ClearChips(flpExclude)`:
-```csharp
-ClearChips(flpCompanies);
-foreach (string domain in profile.CompanyDomains ?? Enumerable.Empty<string>())
-{
-    string name = _allCompanies?.FirstOrDefault(
-        c => string.Equals(c.Domain, domain, StringComparison.OrdinalIgnoreCase))?.Name ?? domain;
-    AddCompanyChip(name, domain);
-}
+pnlFooter.Controls.Add(lblProviderCaption);
+pnlFooter.Controls.Add(cboProvider);
+pnlFooter.Controls.Add(_lblModelId);
+this.Controls.Add(pnlFooter);
+// Added after tblMain (DockStyle.Fill) — WinForms docks Bottom before Fill
 ```
 
-**`ReadProfileFromUi()`** — add to profile initializer:
-```csharp
-CompanyDomains = GetChips(flpCompanies),
+**Why `_provider` is not readonly:** The user may switch providers multiple times in one session.
+All API keys for all three providers are loaded at startup from `appsettings.local.json`, so no
+file I/O is needed on switch — only a new provider object is instantiated.
+
+---
+
+### `JobSearchBuilder.csproj`
+
+Add `<Compile Include="...">` entries inside the existing `<ItemGroup>` with the other Compile entries:
+```xml
+<Compile Include="Interfaces\ILlmProvider.cs" />
+<Compile Include="Models\LlmRequest.cs" />
+<Compile Include="Models\LlmResponse.cs" />
+<Compile Include="Models\LlmToolDefinition.cs" />
+<Compile Include="Models\QueryProfileResult.cs" />
+<Compile Include="Services\InMemoryLlmProvider.cs" />
+<Compile Include="Services\Providers\AnthropicProvider.cs" />
+<Compile Include="Services\Providers\GeminiProvider.cs" />
+<Compile Include="Services\Providers\LlmProviderFactory.cs" />
+<Compile Include="Services\Providers\OpenAiProvider.cs" />
 ```
+
+---
+
+## Files to Create (Tests)
+
+### `JobSearchBuilder.Tests/AnthropicProviderTests.cs`
+
+Uses two internal fake handlers (no real HTTP):
+- `FakeHandler` — returns canned JSON with HTTP 200
+- `FakeCapturingHandler` — same, but also captures the raw request body for assertion
+
+**Test cases:**
+1. `SendAsync_SimpleTextRequest_ReturnsTextContent`
+2. `SendAsync_ToolUseResponse_ReturnsToolCallDetails`
+3. `SendAsync_CacheHit_ReportsCacheReadTokens`
+4. `SendAsync_EnableCaching_IncludesCacheControlInRequest`
+5. `SendAsync_DisabledCaching_OmitsCacheControl`
 
 ---
 
 ## Implementation Order
 
-1. `CompanyEntry.cs` — no dependencies
-2. `CompanyService.cs` — self-contained, testable in isolation
-3. `SearchProfile.cs` — trivial property addition
-4. `QueryBuilder.cs` — extend `BuildSiteBlock`, update call site
-5. `SqlProfileStore.cs` — add read case + write call
-6. `MainForm.Designer.cs` — add control declarations
-7. `MainForm.cs` — wire everything together
-
-Steps 1–5 can be built and tested before touching the UI.
-
----
-
-## Key Reused Patterns
-
-| Pattern | Source File |
-|---|---|
-| Fetch + local cache service | `Services/CountryService.cs` |
-| Autocomplete ComboBox picker | `MainForm.cs` → `_cboLocationPicker` block |
-| ProfileKeywords category discriminator | `Services/SqlProfileStore.cs` → `insertCategory()` |
+1. Models — LlmRequest, LlmResponse, LlmToolDefinition, QueryProfileResult
+2. ILlmProvider interface
+3. AppSettingsLoader — AiSettings class + Ai parsing + local merge
+4. appsettings.json — add Ai block
+5. AnthropicProvider, OpenAiProvider, GeminiProvider
+6. LlmProviderFactory
+7. InMemoryLlmProvider
+8. MainForm.cs — field, constructor wiring, PostInitialize status label
+9. JobSearchBuilder.csproj — add Compile entries
+10. AnthropicProviderTests.cs
 
 ---
 
-## Verification
+## Key Constraints (from CLAUDE.md)
 
-1. **Unit tests**: Add `CompanyServiceTests.cs` (parse, cache round-trip, API fallback). Extend `QueryBuilderTests` (company domains only, merged with ATS, dedup). Extend `SqlProfileStoreTests` (save/load `CompanyDomains`).
-2. **Cold start**: Delete `companies.json` → run app → picker populates from network.
-3. **Warm start**: Run again → cache is used.
-4. **Add company**: Type "Anthropic" → chip shows "Anthropic", query preview shows `site:anthropic.com`.
-5. **Combined**: Check an ATS group + add a company → single `site:` block with both.
-6. **Save/reload**: Save profile → restart → chips reappear with names resolved.
-7. **Freeform domain**: Type `stripe.com` (not in list) → chip added with domain as both name and tag.
+- Block namespaces only — no file-scoped `namespace X;` syntax
+- No nullable reference type annotations
+- No `ArgumentNullException.ThrowIfNull` — manual null checks
+- Use `Newtonsoft.Json` (JObject/JArray) for all JSON — NOT System.Text.Json
+- `async Task` on provider `SendAsync`; `.ConfigureAwait(false)` on all awaits
+- `Debug.WriteLine` for diagnostics — never `Console.WriteLine`
+- All three providers map to the same `LlmResponse` shape
+- `CacheReadTokens` / `CacheWriteTokens` are 0 on non-Anthropic providers
+- Private fields: `_` prefix + camelCase

@@ -35,6 +35,7 @@ Clicking **Open in Google** fires this query with `&tbs=li:1` (past 24 hours) so
 - **One-click Google search** — opens the assembled query directly in your browser
 - **Copy to clipboard** — paste the raw query into any search engine
 - **Persistent storage** — profiles are saved to a local SQL Server database and survive restarts
+- **Describe Role (AI)** — type a plain English description of the role you want (e.g. "Senior .NET developer, fully remote, UTC+1, no clearance") and the app uses an LLM to fill in all the chip categories for you; supports Anthropic, OpenAI, and Gemini
 
 ---
 
@@ -68,7 +69,19 @@ Edit `appsettings.json` and set `ConnectionString` to match your instance:
 }
 ```
 
-### 3. Build & run
+### 3. AI provider (optional)
+
+To use the **Describe Role** feature, add your API key to the `.env` file at the repo root (created automatically if you clone fresh — it is gitignored):
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...        # only needed if switching to OpenAI
+GEMINI_API_KEY=...           # only needed if switching to Gemini
+```
+
+Only the key for the active provider (set in `appsettings.json` under `Ai.Provider`) needs to be populated. The Describe Role button is silently disabled if no key is found.
+
+### 4. Build & run
 
 Open `JobSearchBuilder.sln` in Visual Studio 2022 and press **F5**, or build from the command line:
 

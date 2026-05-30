@@ -1,0 +1,7 @@
+criteria:
+  - name: Uses tool shape
+    description: The response should map cleanly to role, seniority, tech_stack, remote_terms, timezone_terms, and exclude_terms.
+  - name: Avoids invention
+    description: The response should not add technologies, locations, visa terms, or constraints absent from the input.
+  - name: Search usefulness
+    description: Terms should be concise and likely to appear in job postings.

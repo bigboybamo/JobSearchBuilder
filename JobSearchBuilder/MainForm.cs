@@ -144,6 +144,8 @@ namespace JobSearchBuilder
             WireAddBox(txtAddTimezone, flpTimezone);
             WireAddBox(txtAddExclude, flpExclude, isExclude: true);
 
+            AddDescribeRoleButton();
+
             Panel pnlFooter = new Panel
             {
                 Dock = DockStyle.Bottom,
@@ -205,6 +207,28 @@ namespace JobSearchBuilder
             pnlFooter.Controls.Add(cboProvider);
             pnlFooter.Controls.Add(_lblModelId);
             this.Controls.Add(pnlFooter);
+        }
+
+        private void AddDescribeRoleButton()
+        {
+            Button btnDescribeRole = new Button
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(80, 70, 180),
+                Cursor = Cursors.Hand,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.White,
+                Location = new Point(btnSaveProfile.Left - 132, btnSaveProfile.Top),
+                Name = "btnDescribeRole",
+                Size = new Size(126, 28),
+                TabIndex = 4,
+                Text = "Describe Role",
+                UseVisualStyleBackColor = false
+            };
+            btnDescribeRole.Click += btnDescribeRole_Click;
+            pnlEditor.Controls.Add(btnDescribeRole);
+            btnDescribeRole.BringToFront();
         }
 
         private async void LoadCountriesAsync()
@@ -432,6 +456,45 @@ namespace JobSearchBuilder
             timer.Start();
         }
 
+        private async void btnDescribeRole_Click(object sender, EventArgs e)
+        {
+            if (_provider == null)
+            {
+                MessageBox.Show("AI provider is unavailable. Check your provider settings and API key.", "Describe Role",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            DescribeRoleDialogResult dialogResult = ShowRoleDescriptionDialog();
+            if (dialogResult == null || string.IsNullOrWhiteSpace(dialogResult.Description))
+                return;
+
+            Button button = sender as Button;
+            if (button != null)
+                button.Enabled = false;
+
+            Cursor previousCursor = Cursor.Current;
+            Cursor.Current = Cursors.WaitCursor;
+
+            try
+            {
+                NlProfileBuilderService service = new NlProfileBuilderService(_provider, new PromptLoader());
+                QueryProfileResult result = await service.BuildAsync(dialogResult.Description);
+                ApplyQueryProfileResult(result, dialogResult.SaveAsNewProfile);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not build a profile from that description.\r\n\r\n" + ex.Message,
+                    "Describe Role", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Cursor.Current = previousCursor;
+                if (button != null)
+                    button.Enabled = true;
+            }
+        }
+
         // -------------------------------------------------------------------
         // Profile list
         // -------------------------------------------------------------------
@@ -485,6 +548,47 @@ namespace JobSearchBuilder
             foreach (string k in profile.ExcludeKeywords ?? Enumerable.Empty<string>()) AddChip(flpExclude, k, isExclude: true);
             _isLoading = false;
             _isDirty = false;
+            RebuildQuery();
+        }
+
+        private void ApplyQueryProfileResult(QueryProfileResult result, bool saveAsNewProfile)
+        {
+            if (result == null) throw new ArgumentNullException("result");
+
+            SearchProfile profile = ReadProfileFromUi();
+            if (saveAsNewProfile)
+            {
+                DateTime now = DateTime.UtcNow;
+                profile.Id = 0;
+                profile.CreatedAt = now;
+                profile.UpdatedAt = now;
+                profile.Name = BuildAiProfileName(result);
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.Seniority))
+                profile.Seniority = result.Seniority;
+
+            profile.RoleKeywords = new List<string>();
+            if (!string.IsNullOrWhiteSpace(result.Role))
+                profile.RoleKeywords.Add(result.Role.Trim());
+
+            profile.StackKeywords = CopyTerms(result.TechStack);
+            profile.RemoteFilters = CopyTerms(result.RemoteTerms);
+            profile.TimezoneFilters = CopyTerms(result.TimezoneTerms);
+            profile.ExcludeKeywords = CopyTerms(result.ExcludeTerms);
+
+            if (saveAsNewProfile)
+            {
+                SearchProfile saved = _store.Save(profile);
+                _workingProfile = saved;
+                _isDirty = false;
+                PopulateProfileList();
+                SelectProfile(saved.Id);
+                return;
+            }
+
+            LoadProfileIntoUi(profile);
+            _isDirty = true;
             RebuildQuery();
         }
 
@@ -621,6 +725,119 @@ namespace JobSearchBuilder
             List<Control> toRemove = panel.Controls.OfType<Panel>().Cast<Control>().ToList();
             foreach (Control c in toRemove)
                 panel.Controls.Remove(c);
+        }
+
+        private static List<string> CopyTerms(IEnumerable<string> terms)
+        {
+            List<string> result = new List<string>();
+            if (terms == null)
+                return result;
+
+            foreach (string term in terms)
+            {
+                string value = (term ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(value) &&
+                    !result.Any(x => string.Equals(x, value, StringComparison.OrdinalIgnoreCase)))
+                {
+                    result.Add(value);
+                }
+            }
+
+            return result;
+        }
+
+        private static string BuildAiProfileName(QueryProfileResult result)
+        {
+            List<string> parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(result.Seniority) &&
+                !string.Equals(result.Seniority, "Any", StringComparison.OrdinalIgnoreCase))
+            {
+                parts.Add(result.Seniority.Trim());
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.Role))
+                parts.Add(result.Role.Trim());
+
+            string name = parts.Count > 0 ? string.Join(" ", parts) : "AI Profile";
+            return name + " (AI)";
+        }
+
+        private void SelectProfile(int profileId)
+        {
+            for (int i = 0; i < lstProfiles.Items.Count; i++)
+            {
+                SearchProfile profile = lstProfiles.Items[i] as SearchProfile;
+                if (profile != null && profile.Id == profileId)
+                {
+                    lstProfiles.SelectedIndex = i;
+                    return;
+                }
+            }
+        }
+
+        private static DescribeRoleDialogResult ShowRoleDescriptionDialog()
+        {
+            using (Form dialog = new Form())
+            using (TextBox txtDescription = new TextBox())
+            using (CheckBox chkSaveAsNewProfile = new CheckBox())
+            using (Button btnOk = new Button())
+            using (Button btnCancel = new Button())
+            {
+                dialog.Text = "Describe Role";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.ClientSize = new Size(520, 248);
+
+                txtDescription.Multiline = true;
+                txtDescription.ScrollBars = ScrollBars.Vertical;
+                txtDescription.Font = new Font("Segoe UI", 10f);
+                txtDescription.Location = new Point(12, 12);
+                txtDescription.Size = new Size(496, 154);
+                txtDescription.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+
+                chkSaveAsNewProfile.Text = "Save query in a new profile";
+                chkSaveAsNewProfile.Checked = true;
+                chkSaveAsNewProfile.AutoSize = true;
+                chkSaveAsNewProfile.Font = new Font("Segoe UI", 9f);
+                chkSaveAsNewProfile.Location = new Point(12, 176);
+                chkSaveAsNewProfile.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
+
+                btnOk.Text = "Build Profile";
+                btnOk.DialogResult = DialogResult.OK;
+                btnOk.Size = new Size(110, 28);
+                btnOk.Location = new Point(282, 208);
+                btnOk.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
+
+                btnCancel.Text = "Cancel";
+                btnCancel.DialogResult = DialogResult.Cancel;
+                btnCancel.Size = new Size(90, 28);
+                btnCancel.Location = new Point(402, 208);
+                btnCancel.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
+
+                dialog.Controls.Add(txtDescription);
+                dialog.Controls.Add(chkSaveAsNewProfile);
+                dialog.Controls.Add(btnOk);
+                dialog.Controls.Add(btnCancel);
+                dialog.AcceptButton = btnOk;
+                dialog.CancelButton = btnCancel;
+
+                if (dialog.ShowDialog() != DialogResult.OK)
+                    return null;
+
+                return new DescribeRoleDialogResult
+                {
+                    Description = txtDescription.Text.Trim(),
+                    SaveAsNewProfile = chkSaveAsNewProfile.Checked
+                };
+            }
+        }
+
+        private class DescribeRoleDialogResult
+        {
+            public string Description { get; set; }
+            public bool SaveAsNewProfile { get; set; }
         }
     }
 }
