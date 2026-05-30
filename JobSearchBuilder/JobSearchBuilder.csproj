@@ -201,6 +201,8 @@
     <Compile Include="Services\IDbConnectionFactory.cs" />
     <Compile Include="Services\InMemoryProfileStore.cs" />
     <Compile Include="Services\InMemoryLlmProvider.cs" />
+    <Compile Include="Services\NlProfileBuilderService.cs" />
+    <Compile Include="Services\PromptLoader.cs" />
     <Compile Include="Services\SqlConnectionFactory.cs" />
     <Compile Include="Services\SqlProfileStore.cs" />
     <Compile Include="Services\QueryBuilder.cs" />
@@ -224,6 +226,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="appsettings.local.json" Condition="Exists('appsettings.local.json')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\prompts\nl_profile_builder\v1.xml">
+      <Link>prompts\nl_profile_builder\v1.xml</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Scripts\CreateTables.sql" />

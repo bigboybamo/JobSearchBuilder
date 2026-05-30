@@ -96,13 +96,60 @@ namespace JobSearchBuilder.Services
                 }
             }
 
+            Dictionary<string, string> dotEnv = LoadDotEnv();
             ai.ApiKeys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "Anthropic", Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY") ?? string.Empty },
-                { "OpenAI",    Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? string.Empty },
-                { "Gemini",    Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty }
+                { "Anthropic", GetDotEnvValue(dotEnv, "ANTHROPIC_API_KEY") },
+                { "OpenAI",    GetDotEnvValue(dotEnv, "OPENAI_API_KEY") },
+                { "Gemini",    GetDotEnvValue(dotEnv, "GEMINI_API_KEY") }
             };
             return ai;
+        }
+
+        private static Dictionary<string, string> LoadDotEnv()
+        {
+            Dictionary<string, string> values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            // Walk up from the exe directory to find .env at the repo root
+            string dir = AppDomain.CurrentDomain.BaseDirectory;
+            string envPath = null;
+            for (int i = 0; i < 6; i++)
+            {
+                string candidate = Path.Combine(dir, ".env");
+                if (File.Exists(candidate))
+                {
+                    envPath = candidate;
+                    break;
+                }
+                string parent = Path.GetDirectoryName(dir);
+                if (parent == null || parent == dir) break;
+                dir = parent;
+            }
+
+            if (envPath == null)
+                return values;
+
+            foreach (string line in File.ReadAllLines(envPath))
+            {
+                string trimmed = line.Trim();
+                if (trimmed.Length == 0 || trimmed.StartsWith("#"))
+                    continue;
+
+                int eq = trimmed.IndexOf('=');
+                if (eq <= 0) continue;
+
+                string key = trimmed.Substring(0, eq).Trim();
+                string value = trimmed.Substring(eq + 1).Trim();
+                values[key] = value;
+            }
+
+            return values;
+        }
+
+        private static string GetDotEnvValue(Dictionary<string, string> dotEnv, string key)
+        {
+            string value;
+            return dotEnv.TryGetValue(key, out value) ? value : string.Empty;
         }
 
         private static List<string> ReadStringList(JObject parent, string key)

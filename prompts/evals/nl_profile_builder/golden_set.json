@@ -1,0 +1,13 @@
+[
+  {
+    "input": "Senior .NET developer, fully remote, UTC+1 or UTC+2, no security clearance",
+    "expected": {
+      "role": "Developer",
+      "seniority": "Senior",
+      "tech_stack": [".NET"],
+      "remote_terms": ["fully remote"],
+      "timezone_terms": ["UTC+1", "UTC+2"],
+      "exclude_terms": ["security clearance"]
+    }
+  }
+]
