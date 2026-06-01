@@ -203,6 +203,7 @@
     <Compile Include="Services\InMemoryLlmProvider.cs" />
     <Compile Include="Services\NlProfileBuilderService.cs" />
     <Compile Include="Services\PromptLoader.cs" />
+    <Compile Include="Services\QuerySuggestionService.cs" />
     <Compile Include="Services\SqlConnectionFactory.cs" />
     <Compile Include="Services\SqlProfileStore.cs" />
     <Compile Include="Services\QueryBuilder.cs" />
@@ -230,6 +231,10 @@
     </None>
     <None Include="..\prompts\nl_profile_builder\v1.xml">
       <Link>prompts\nl_profile_builder\v1.xml</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\prompts\query_suggestions\v1.xml">
+      <Link>prompts\query_suggestions\v1.xml</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Scripts\CreateTables.sql" />

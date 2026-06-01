@@ -1,0 +1,26 @@
+[
+  {
+    "category": "Tech Stack",
+    "existingKeywords": ["C#", ".NET"],
+    "partialInput": "azure",
+    "expectedSuggestions": ["Azure Functions", "Azure App Service", "Azure DevOps"]
+  },
+  {
+    "category": "Role",
+    "existingKeywords": ["Developer"],
+    "partialInput": "platform",
+    "expectedSuggestions": ["Platform Engineer", "Backend Engineer"]
+  },
+  {
+    "category": "Remote",
+    "existingKeywords": ["Remote"],
+    "partialInput": "",
+    "expectedSuggestions": ["Fully Remote", "Work from Home"]
+  },
+  {
+    "category": "Exclude Terms",
+    "existingKeywords": ["security clearance"],
+    "partialInput": "senior",
+    "expectedSuggestions": ["principal", "staff"]
+  }
+]
