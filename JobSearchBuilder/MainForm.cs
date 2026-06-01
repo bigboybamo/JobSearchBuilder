@@ -26,6 +26,16 @@ namespace JobSearchBuilder
         private bool _isLoading;
         private QueryResult _lastQueryResult;
         private ComboBox _cboLocationPicker;
+        private Timer _suggestionDebounce;
+        private FlowLayoutPanel _activeSuggPanel;
+        private FlowLayoutPanel _activeChipPanel;
+        private TextBox _activeAddBox;
+        private string _activeSuggCategory;
+        private List<FlowLayoutPanel> _aiSuggestionPanels;
+        private int _suggestionRequestVersion;
+        private bool _suppressSuggestionTextChanged;
+        private PromptLoader _promptLoader;
+        private bool _activeSuggIsExclude;
 
         public MainForm()
         {
@@ -143,6 +153,12 @@ namespace JobSearchBuilder
             WireAddBox(txtAddRemote, flpRemote);
             WireAddBox(txtAddTimezone, flpTimezone);
             WireAddBox(txtAddExclude, flpExclude, isExclude: true);
+
+            _suggestionDebounce = new Timer { Interval = 300 };
+            _suggestionDebounce.Tick += SuggestionDebounce_Tick;
+            _promptLoader = new PromptLoader();
+            _aiSuggestionPanels = new List<FlowLayoutPanel>();
+            WireAiSuggestions();
 
             AddDescribeRoleButton();
 
@@ -307,6 +323,221 @@ namespace JobSearchBuilder
                     MarkDirtyAndRebuild();
                 }
             };
+        }
+
+        private void WireAiSuggestions()
+        {
+            WireAiSuggestionRow("Tech Stack", flpStackAddRow, flpStack, txtAddStack, false);
+            WireAiSuggestionRow("Role", flpRolesAddRow, flpRoles, txtAddRole, false);
+            WireAiSuggestionRow("Visa", flpVisaAddRow, flpVisa, txtAddVisa, false);
+            WireAiSuggestionRow("Remote", flpRemoteAddRow, flpRemote, txtAddRemote, false);
+            WireAiSuggestionRow("Timezone", flpTimezoneAddRow, flpTimezone, txtAddTimezone, false);
+            WireAiSuggestionRow("Exclude Terms", flpExcludeAddRow, flpExclude, txtAddExclude, true);
+        }
+
+        private void WireAiSuggestionRow(string categoryName, FlowLayoutPanel addRow, FlowLayoutPanel chipPanel,
+                                         TextBox addBox, bool isExclude)
+        {
+            FlowLayoutPanel aiSuggPanel = new FlowLayoutPanel
+            {
+                Width = 880,
+                Height = 30,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Visible = false,
+                Tag = categoryName,
+                Margin = new Padding(3, 0, 3, 8)
+            };
+            _aiSuggestionPanels.Add(aiSuggPanel);
+
+            int addRowIndex = flpEditor.Controls.GetChildIndex(addRow);
+            flpEditor.Controls.Add(aiSuggPanel);
+            flpEditor.Controls.SetChildIndex(aiSuggPanel, addRowIndex + 1);
+
+            addBox.Enter += (s, e) => HideOtherAiSuggestionRows(aiSuggPanel);
+            chipPanel.Click += (s, e) => HideOtherAiSuggestionRows(aiSuggPanel);
+
+            addBox.TextChanged += (s, e) =>
+            {
+                if (_suppressSuggestionTextChanged)
+                    return;
+
+                HideOtherAiSuggestionRows(aiSuggPanel);
+                _activeSuggPanel = aiSuggPanel;
+                _activeChipPanel = chipPanel;
+                _activeAddBox = addBox;
+                _activeSuggCategory = categoryName;
+                _activeSuggIsExclude = isExclude;
+                _suggestionRequestVersion++;
+                _suggestionDebounce.Stop();
+
+                if (string.IsNullOrWhiteSpace(addBox.Text))
+                {
+                    HideAiSuggestionPanel(aiSuggPanel);
+                    return;
+                }
+
+                _suggestionDebounce.Start();
+            };
+        }
+
+        private async void SuggestionDebounce_Tick(object sender, EventArgs e)
+        {
+            _suggestionDebounce.Stop();
+            if (_isLoading) return;
+            if (_provider == null || _activeSuggPanel == null || _activeChipPanel == null || _activeAddBox == null)
+                return;
+
+            FlowLayoutPanel suggestionPanel = _activeSuggPanel;
+            FlowLayoutPanel chipPanel = _activeChipPanel;
+            TextBox addBox = _activeAddBox;
+            string category = _activeSuggCategory;
+            bool isExclude = _activeSuggIsExclude;
+            int requestVersion = _suggestionRequestVersion;
+            List<string> existing = GetChips(chipPanel);
+            string partial = addBox.Text ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(partial))
+            {
+                HideAiSuggestionPanel(suggestionPanel);
+                return;
+            }
+
+            try
+            {
+                QuerySuggestionService service = new QuerySuggestionService(_provider, _promptLoader);
+                List<string> suggestions = await service.SuggestAsync(category, existing, partial);
+
+                if (requestVersion == _suggestionRequestVersion &&
+                    suggestionPanel == _activeSuggPanel &&
+                    chipPanel == _activeChipPanel &&
+                    addBox == _activeAddBox)
+                {
+                    ShowAiSuggestions(suggestionPanel, chipPanel, addBox, isExclude, suggestions);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Suggestion fetch failed: " + ex.Message);
+            }
+        }
+
+        private void ShowAiSuggestions(FlowLayoutPanel suggestionPanel, FlowLayoutPanel chipPanel,
+                                        TextBox addBox, bool isExclude, List<string> suggestions)
+        {
+            suggestionPanel.Controls.Clear();
+            if (suggestions == null || suggestions.Count == 0)
+            {
+                suggestionPanel.Visible = false;
+                return;
+            }
+
+            List<string> existing = GetChips(chipPanel);
+            List<string> filtered = suggestions
+                .Where(s => !existing.Any(x => string.Equals(x, s, StringComparison.OrdinalIgnoreCase)))
+                .Take(5)
+                .ToList();
+
+            if (filtered.Count == 0)
+            {
+                suggestionPanel.Visible = false;
+                return;
+            }
+
+            Label prefix = new Label
+            {
+                Text = "AI:",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(155, 100, 20),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(2, 5, 6, 0)
+            };
+            suggestionPanel.Controls.Add(prefix);
+
+            Button cancel = new Button
+            {
+                Text = "x",
+                AutoSize = false,
+                Width = 26,
+                Height = 24,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(255, 246, 220),
+                ForeColor = Color.FromArgb(155, 100, 20),
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 8, 0)
+            };
+            cancel.FlatAppearance.BorderColor = Color.FromArgb(215, 150, 45);
+            cancel.FlatAppearance.BorderSize = 1;
+            cancel.Click += (s, e) => HideAiSuggestionPanel(suggestionPanel);
+            suggestionPanel.Controls.Add(cancel);
+
+            foreach (string suggestion in filtered)
+            {
+                string term = suggestion;
+                Button button = new Button
+                {
+                    Text = term,
+                    AutoSize = true,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(255, 246, 220),
+                    ForeColor = Color.FromArgb(155, 100, 20),
+                    Font = new Font("Segoe UI", 8.5f),
+                    Cursor = Cursors.Hand,
+                    Height = 26,
+                    Padding = new Padding(6, 2, 6, 2),
+                    Margin = new Padding(2, 0, 2, 0)
+                };
+                button.FlatAppearance.BorderColor = Color.FromArgb(215, 150, 45);
+                button.FlatAppearance.BorderSize = 1;
+                button.Click += (s, e) =>
+                {
+                    AddChip(chipPanel, term, isExclude);
+                    ClearSuggestionInput(addBox);
+                    HideAiSuggestionPanel(suggestionPanel);
+                    MarkDirtyAndRebuild();
+                };
+                suggestionPanel.Controls.Add(button);
+            }
+
+            suggestionPanel.Visible = true;
+        }
+
+        private void HideOtherAiSuggestionRows(FlowLayoutPanel activePanel)
+        {
+            if (_aiSuggestionPanels == null)
+                return;
+
+            foreach (FlowLayoutPanel panel in _aiSuggestionPanels)
+            {
+                if (panel != activePanel)
+                    HideAiSuggestionPanel(panel);
+            }
+        }
+
+        private void HideAiSuggestionPanel(FlowLayoutPanel suggestionPanel)
+        {
+            if (suggestionPanel == null)
+                return;
+
+            suggestionPanel.Controls.Clear();
+            suggestionPanel.Visible = false;
+        }
+
+        private void ClearSuggestionInput(TextBox addBox)
+        {
+            if (addBox == null)
+                return;
+
+            _suppressSuggestionTextChanged = true;
+            try
+            {
+                addBox.Clear();
+            }
+            finally
+            {
+                _suppressSuggestionTextChanged = false;
+            }
         }
 
         // -------------------------------------------------------------------
@@ -478,7 +709,7 @@ namespace JobSearchBuilder
 
             try
             {
-                NlProfileBuilderService service = new NlProfileBuilderService(_provider, new PromptLoader());
+                NlProfileBuilderService service = new NlProfileBuilderService(_provider, _promptLoader);
                 QueryProfileResult result = await service.BuildAsync(dialogResult.Description);
                 ApplyQueryProfileResult(result, dialogResult.SaveAsNewProfile);
             }

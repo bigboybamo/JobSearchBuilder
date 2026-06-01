@@ -1,0 +1,10 @@
+description: Query suggestion prompt rubric
+criteria:
+  - name: concise
+    description: Suggestions are short keyword phrases suitable for chips.
+  - name: category_specific
+    description: Suggestions match the requested keyword category.
+  - name: non_repetitive
+    description: Suggestions do not repeat existing keywords.
+  - name: limited_count
+    description: No more than five suggestions are returned.
