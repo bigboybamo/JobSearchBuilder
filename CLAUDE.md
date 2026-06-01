@@ -263,7 +263,7 @@ Steps: NuGet restore → dotnet restore → build test project → run tests.
 ### Progress Tracker
 - [x] Phase 1 — `feature/llm-provider`
 - [x] Phase 2 — `feature/nl-profile-builder`
-- [ ] Phase 3 — `feature/prompt-caching`
+- [x] Phase 3 — `feature/prompt-caching`
 - [ ] Phase 4 — `feature/query-suggestions`
 - [ ] Phase 5 — `feature/query-review`
 - [ ] Phase 6 — `feature/eval-pipeline`
