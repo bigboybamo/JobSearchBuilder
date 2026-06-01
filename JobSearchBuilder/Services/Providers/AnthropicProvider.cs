@@ -132,6 +132,8 @@ namespace JobSearchBuilder.Services.Providers
 
             if (mapped.CacheReadTokens > 0)
                 Debug.WriteLine("Anthropic cache hit tokens: " + mapped.CacheReadTokens);
+            if (mapped.CacheWriteTokens > 0)
+                Debug.WriteLine("Anthropic cache write tokens: " + mapped.CacheWriteTokens);
 
             return mapped;
         }
