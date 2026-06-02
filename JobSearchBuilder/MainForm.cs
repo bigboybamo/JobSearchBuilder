@@ -36,6 +36,8 @@ namespace JobSearchBuilder
         private bool _suppressSuggestionTextChanged;
         private PromptLoader _promptLoader;
         private bool _activeSuggIsExclude;
+        private Panel _pnlReviewResult;
+        private Button _btnReviewQuery;
 
         public MainForm()
         {
@@ -223,6 +225,9 @@ namespace JobSearchBuilder
             pnlFooter.Controls.Add(cboProvider);
             pnlFooter.Controls.Add(_lblModelId);
             this.Controls.Add(pnlFooter);
+
+            AddReviewQueryPanel();
+            AddReviewQueryButton();
         }
 
         private void AddDescribeRoleButton()
@@ -245,6 +250,37 @@ namespace JobSearchBuilder
             btnDescribeRole.Click += btnDescribeRole_Click;
             pnlEditor.Controls.Add(btnDescribeRole);
             btnDescribeRole.BringToFront();
+        }
+
+        private void AddReviewQueryPanel()
+        {
+            _pnlReviewResult = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 36,
+                BackColor = Color.FromArgb(30, 30, 45),
+                Padding = new Padding(12, 4, 12, 4),
+                Visible = false
+            };
+
+            pnlPreview.Controls.Add(_pnlReviewResult);
+        }
+
+        private void AddReviewQueryButton()
+        {
+            _btnReviewQuery = new Button
+            {
+                Text = "Review Query",
+                BackColor = Color.FromArgb(50, 100, 55),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Size = new Size(120, 28),
+                Margin = new Padding(0, 0, 6, 0)
+            };
+            _btnReviewQuery.Click += btnReviewQuery_Click;
+            flpPreviewButtons.Controls.Add(_btnReviewQuery);
         }
 
         private async void LoadCountriesAsync()
@@ -726,6 +762,163 @@ namespace JobSearchBuilder
             }
         }
 
+        private async void btnReviewQuery_Click(object sender, EventArgs e)
+        {
+            if (_provider == null)
+            {
+                MessageBox.Show("AI provider is unavailable. Check your provider settings and API key.",
+                    "Review Query", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (_lastQueryResult == null || string.IsNullOrWhiteSpace(_lastQueryResult.RawQuery))
+                return;
+
+            _btnReviewQuery.Enabled = false;
+            Cursor previousCursor = Cursor.Current;
+            Cursor.Current = Cursors.WaitCursor;
+
+            try
+            {
+                QueryReviewService service = new QueryReviewService(_provider, _promptLoader);
+                QueryReviewResult result = await service.ReviewAsync(_lastQueryResult.RawQuery);
+                ShowReviewResult(result);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Query review failed: " + ex.Message);
+                ShowReviewResult(new QueryReviewResult());
+            }
+            finally
+            {
+                Cursor.Current = previousCursor;
+                _btnReviewQuery.Enabled = true;
+            }
+        }
+
+        private void ShowReviewResult(QueryReviewResult result)
+        {
+            if (_pnlReviewResult == null)
+                return;
+
+            _pnlReviewResult.Controls.Clear();
+            QueryReviewResult review = result ?? new QueryReviewResult();
+            bool hasIssues = review.Issues.Count > 0;
+            int listItems = (hasIssues ? review.Issues.Count : 1) + review.Suggestions.Count;
+            int expandedHeight = Math.Min(122, Math.Max(58, 42 + (listItems * 22)));
+
+            _pnlReviewResult.BackColor = hasIssues
+                ? Color.FromArgb(45, 38, 18)
+                : Color.FromArgb(18, 45, 30);
+
+            Panel header = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 28,
+                BackColor = _pnlReviewResult.BackColor
+            };
+
+            Label title = new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = hasIssues ? "Query review found " + review.Issues.Count + " issue(s)" : "Query review passed",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = hasIssues ? Color.FromArgb(245, 190, 85) : Color.FromArgb(120, 220, 150),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            Button close = CreateReviewPanelButton("x");
+            close.Click += (s, e) => HideReviewResult();
+
+            Button minimize = CreateReviewPanelButton("-");
+            minimize.Click += (s, e) =>
+            {
+                bool collapse = minimize.Text == "-";
+                minimize.Text = collapse ? "+" : "-";
+                _pnlReviewResult.Height = collapse ? 32 : expandedHeight;
+                foreach (Control control in _pnlReviewResult.Controls)
+                {
+                    if (control.Tag is string tag && tag == "ReviewBody")
+                        control.Visible = !collapse;
+                }
+            };
+
+            header.Controls.Add(title);
+            header.Controls.Add(close);
+            header.Controls.Add(minimize);
+
+            FlowLayoutPanel list = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = _pnlReviewResult.BackColor,
+                Tag = "ReviewBody"
+            };
+
+            if (!hasIssues)
+            {
+                list.Controls.Add(CreateReviewLabel("Query looks good", Color.FromArgb(120, 220, 150), FontStyle.Bold));
+            }
+            else
+            {
+                foreach (string issue in review.Issues)
+                    list.Controls.Add(CreateReviewLabel("Issue: " + issue, Color.FromArgb(245, 190, 85), FontStyle.Bold));
+            }
+
+            foreach (string suggestion in review.Suggestions)
+                list.Controls.Add(CreateReviewLabel("Suggestion: " + suggestion, Color.FromArgb(220, 200, 150), FontStyle.Regular));
+
+            _pnlReviewResult.Height = expandedHeight;
+            _pnlReviewResult.Controls.Add(list);
+            _pnlReviewResult.Controls.Add(header);
+            header.BringToFront();
+            _pnlReviewResult.Visible = true;
+        }
+
+        private static Button CreateReviewPanelButton(string text)
+        {
+            Button button = new Button
+            {
+                Dock = DockStyle.Right,
+                Text = text,
+                Width = 28,
+                Height = 24,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(35, 35, 50),
+                ForeColor = Color.FromArgb(230, 230, 240),
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(2, 2, 0, 2)
+            };
+            button.FlatAppearance.BorderColor = Color.FromArgb(85, 85, 105);
+            button.FlatAppearance.BorderSize = 1;
+            return button;
+        }
+
+        private static Label CreateReviewLabel(string text, Color foreColor, FontStyle fontStyle)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = false,
+                Width = 1200,
+                Height = 20,
+                Font = new Font("Segoe UI", 8.5f, fontStyle),
+                ForeColor = foreColor,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true,
+                Margin = new Padding(0, 0, 0, 2)
+            };
+        }
+
+        private void HideReviewResult()
+        {
+            if (_pnlReviewResult != null)
+                _pnlReviewResult.Visible = false;
+        }
+
         // -------------------------------------------------------------------
         // Profile list
         // -------------------------------------------------------------------
@@ -857,6 +1050,8 @@ namespace JobSearchBuilder
 
         private void RebuildQuery()
         {
+            HideReviewResult();
+
             try
             {
                 QueryResult result = _queryBuilder.Build(ReadProfileFromUi());

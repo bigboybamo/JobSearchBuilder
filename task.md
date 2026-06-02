@@ -1,123 +1,184 @@
-# Phase 4 — Query Chip Suggestions: Implementation Plan
+# Phase 5 — Query Review: Implementation Plan
 
 ## Context
-Each keyword category has a chip `FlowLayoutPanel` (e.g. `flpStack`) with an inline `TextBox` (`txtAddStack`) and a static suggestion-button row (`flpStackAddRow`). Phase 4 adds a third row per category — AI suggestions — that populates via a 300ms debounce on each `TextBox.TextChanged`.
+`pnlPreview` is docked Bottom inside `pnlEditor`. It contains `lblPreviewHeader` (Top), `txtQueryPreview` (Fill), and `flpPreviewButtons` (Bottom, right-to-left). A review result panel added with `DockStyle.Bottom` in `PostInitialize` slots naturally between `txtQueryPreview` and `flpPreviewButtons`. WinForms skips hidden controls during docking, so the panel is invisible until a review runs with no layout side effects.
+
+Phase 5 also completes the deferred Phase 3 item — `EnableCaching = true` on `QueryReviewService`.
 
 ---
 
-## Step 1 — `QuerySuggestionService` (`Services/QuerySuggestionService.cs`)
+## Step 1 — `QueryReviewResult` (`Models/QueryReviewResult.cs`)
 
 ```csharp
-// category: "Tech Stack" | "Role" | "Visa" | "Remote" | "Timezone" | "Exclude Terms"
-// existingKeywords: chips already present in that category
-// partialInput: what the user has typed so far (may be empty string)
-public async Task<List<string>> SuggestAsync(
-    string category, List<string> existingKeywords, string partialInput)
-```
-
-- `ModelTier = "Balanced"`, `EnableCaching = true`, `ForceToolName = "suggest_keywords"`
-- System prompt from `PromptLoader.Load("query_suggestions", "v1")`
-- User message built dynamically — goes in `messages[]` only, never in the system block:
-  ```
-  Category: Tech Stack
-  Already added: C#, .NET
-  Partial input: azure
-  ```
-- Tool schema: `{ "suggestions": { "type": "array", "items": { "type": "string" }, "maxItems": 5 } }`
-- Returns the parsed list; returns empty list silently on any exception (never throws to the UI)
-
----
-
-## Step 2 — `prompts/query_suggestions/v1.xml`
-
-Simple content — no XML structure tags needed:
-
-```xml
-<prompt>You are a job search assistant. Given a keyword category, existing keywords, and optional partial input from the user, suggest up to 5 relevant additional keywords to add. Do not repeat existing keywords. Keep suggestions concise and specific to the category.</prompt>
-```
-
-Companion files required: `CHANGELOG.md`, `rubric.yaml`, `prompts/evals/query_suggestions/golden_set.json`
-
----
-
-## Step 3 — `MainForm.cs` changes
-
-**New fields:**
-```csharp
-private Timer _suggestionDebounce;
-private FlowLayoutPanel _activeSuggPanel;
-private FlowLayoutPanel _activeChipPanel;
-private TextBox _activeAddBox;
-private string _activeSuggCategory;
-```
-
-**New method `WireAiSuggestions()`** — called from `PostInitialize()` after the existing `WireAddBox` calls. For each category (Stack, Roles, Visa, Remote, Timezone, Exclude — skip Locations which uses a ComboBox):
-1. Create a `FlowLayoutPanel aiSuggPanel` with a small "AI:" label prefix, `Visible = false`, `Tag = categoryName`
-2. Insert it into the parent container below its `flpXxxAddRow`
-3. Wire `addBox.TextChanged` to restart the debounce and capture the active panel/box/category
-
-**Debounce timer** (initialised in `PostInitialize()`):
-```csharp
-_suggestionDebounce = new Timer { Interval = 300 };
-_suggestionDebounce.Tick += SuggestionDebounce_Tick;
-```
-
-`TextChanged` handler pattern (per category, captured via closure):
-```csharp
-addBox.TextChanged += (s, e) =>
+public class QueryReviewResult
 {
-    _activeSuggPanel    = aiSuggPanel;
-    _activeChipPanel    = chipPanel;
-    _activeAddBox       = addBox;
-    _activeSuggCategory = categoryName;
-    _suggestionDebounce.Stop();
-    _suggestionDebounce.Start();
-};
-```
+    public List<string> Issues { get; set; }
+    public List<string> Suggestions { get; set; }
 
-**`SuggestionDebounce_Tick` (async void):**
-```csharp
-private async void SuggestionDebounce_Tick(object sender, EventArgs e)
-{
-    _suggestionDebounce.Stop();
-    if (_provider == null || _activeSuggPanel == null) return;
-
-    List<string> existing = GetChips(_activeChipPanel);
-    string partial = _activeAddBox?.Text ?? string.Empty;
-
-    try
+    public QueryReviewResult()
     {
-        QuerySuggestionService svc = new QuerySuggestionService(_provider, new PromptLoader());
-        List<string> suggestions = await svc.SuggestAsync(_activeSuggCategory, existing, partial);
-        ShowAiSuggestions(_activeSuggPanel, _activeChipPanel, suggestions);
-    }
-    catch (Exception ex)
-    {
-        Debug.WriteLine("Suggestion fetch failed: " + ex.Message);
+        Issues = new List<string>();
+        Suggestions = new List<string>();
     }
 }
 ```
 
-**`ShowAiSuggestions()`:** Clears the panel, hides it if list is empty, otherwise populates styled buttons (same look as `AddSuggestionButtons` but with an amber/gold accent to distinguish AI suggestions from static ones). Each button click calls `AddChip(chipPanel, term)` and `MarkDirtyAndRebuild()`.
+---
+
+## Step 2 — `QueryReviewService` (`Services/QueryReviewService.cs`)
+
+```csharp
+public async Task<QueryReviewResult> ReviewAsync(string query)
+```
+
+- Throws `ArgumentException` for null/whitespace query
+- `ModelTier = "Balanced"`, `EnableCaching = true`
+- **No tool use** — plain JSON parsed from `response.TextContent`
+- No `ForceToolName`, no `Tools` list
+- System prompt from `PromptLoader.Load("query_review", "v1")`
+- User message: the raw query string (never in the system block)
+- Returns `new QueryReviewResult()` (empty lists) on any exception — never throws to the UI
+
+**Expected JSON shape from model:**
+```json
+{ "issues": ["...", "..."], "suggestions": ["...", "..."] }
+```
+
+**Markdown fence stripping** — models sometimes wrap JSON in ```json ```; strip before parsing:
+```csharp
+private static string StripMarkdownFence(string text)
+{
+    string trimmed = (text ?? string.Empty).Trim();
+    if (!trimmed.StartsWith("```")) return trimmed;
+    int newline = trimmed.IndexOf('\n');
+    if (newline >= 0) trimmed = trimmed.Substring(newline + 1);
+    if (trimmed.EndsWith("```"))
+        trimmed = trimmed.Substring(0, trimmed.Length - 3).TrimEnd();
+    return trimmed;
+}
+```
 
 ---
 
-## Step 4 — Extended thinking experiment (documentation only, no code)
+## Step 3 — `prompts/query_review/v1.xml`
 
-In `prompts/query_suggestions/CHANGELOG.md` after initial release, add a section documenting:
-- Re-ran `SuggestAsync` manually with extended thinking enabled on the same `Balanced` model
-- Measured: latency (~3–5s vs ~0.5s without extended thinking), token cost (~8x higher), quality delta (negligible — same 5 terms)
-- Conclusion: extended thinking is an **anti-pattern** for latency-sensitive, low-stakes calls like chip suggestions — adds cost and delay with no quality gain
+Full XML structure with `<instructions>`, `<context>`, `<output_format>`, `<constraints>`. Instructs the model to:
+- Analyse the Google search query for potential problems (URL length, conflicting terms, overly broad terms, missing operators)
+- Return **only** raw JSON — no markdown, no prose
+- `issues`: concrete problems with the query
+- `suggestions`: actionable improvements
+
+Companion files: `CHANGELOG.md`, `rubric.yaml`, `prompts/evals/query_review/golden_set.json`
 
 ---
 
-## Step 5 — Tests (`QuerySuggestionServiceTests.cs`)
+## Step 4 — `MainForm.cs` changes
 
-3 tests using `InMemoryLlmProvider`:
+**New fields:**
+```csharp
+private Panel _pnlReviewResult;
+private Button _btnReviewQuery;
+```
 
-1. `SuggestAsync_ValidCategory_SendsBalancedCachedForcedToolRequest` — verify `ModelTier = "Balanced"`, `EnableCaching = true`, `ForceToolName = "suggest_keywords"`, user message contains category + existing keywords
-2. `SuggestAsync_ToolResponse_ReturnsParsedList` — verify the returned `List<string>` matches the tool arguments JSON
-3. `SuggestAsync_NullCategory_ThrowsArgumentException`
+**`PostInitialize()` — add after footer panel setup:**
+
+```csharp
+// Review result panel — docked Bottom inside pnlPreview, hidden until review runs
+_pnlReviewResult = new Panel
+{
+    Dock = DockStyle.Bottom,
+    Height = 36,
+    BackColor = Color.FromArgb(30, 30, 45),
+    Padding = new Padding(12, 4, 12, 4),
+    Visible = false
+};
+pnlPreview.Controls.Add(_pnlReviewResult);
+
+// Review Query button — added to flpPreviewButtons (right-to-left, appears leftmost)
+_btnReviewQuery = new Button
+{
+    Text = "Review Query",
+    BackColor = Color.FromArgb(50, 100, 55),
+    ForeColor = Color.White,
+    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+    FlatStyle = FlatStyle.Flat,
+    Cursor = Cursors.Hand,
+    Size = new Size(120, 28),
+    Margin = new Padding(0, 0, 6, 0)
+};
+_btnReviewQuery.Click += btnReviewQuery_Click;
+flpPreviewButtons.Controls.Add(_btnReviewQuery);
+```
+
+**`btnReviewQuery_Click` (async void):**
+```csharp
+private async void btnReviewQuery_Click(object sender, EventArgs e)
+{
+    if (_provider == null)
+    {
+        MessageBox.Show("AI provider is unavailable. Check your provider settings and API key.",
+            "Review Query", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        return;
+    }
+    if (_lastQueryResult == null || string.IsNullOrWhiteSpace(_lastQueryResult.RawQuery))
+        return;
+
+    _btnReviewQuery.Enabled = false;
+    Cursor previousCursor = Cursor.Current;
+    Cursor.Current = Cursors.WaitCursor;
+    try
+    {
+        QueryReviewService svc = new QueryReviewService(_provider, _promptLoader);
+        QueryReviewResult result = await svc.ReviewAsync(_lastQueryResult.RawQuery);
+        ShowReviewResult(result);
+    }
+    catch (Exception ex)
+    {
+        Debug.WriteLine("Query review failed: " + ex.Message);
+    }
+    finally
+    {
+        Cursor.Current = previousCursor;
+        _btnReviewQuery.Enabled = true;
+    }
+}
+```
+
+**`ShowReviewResult(QueryReviewResult result)`:**
+- Clears `_pnlReviewResult.Controls`
+- If `Issues.Count == 0`: dark green background, single "Query looks good" label in green
+- Otherwise: dark amber background, one label per issue (amber text) + one label per suggestion (dimmer text), panel height expands to fit content
+- Sets `_pnlReviewResult.Visible = true`
+
+**`HideReviewResult()`:**
+```csharp
+private void HideReviewResult()
+{
+    if (_pnlReviewResult != null)
+        _pnlReviewResult.Visible = false;
+}
+```
+
+**`RebuildQuery()` modification** — add `HideReviewResult()` at the top so any stale result is cleared whenever the query changes:
+```csharp
+private void RebuildQuery()
+{
+    HideReviewResult();
+    // ... existing logic
+}
+```
+
+---
+
+## Step 5 — Tests (`QueryReviewServiceTests.cs`)
+
+5 tests using `InMemoryLlmProvider`:
+
+1. `ReviewAsync_ValidQuery_SendsBalancedCachedRequest` — verify `ModelTier = "Balanced"`, `EnableCaching = true`, no `ForceToolName`, no `Tools`, user message equals the query string
+2. `ReviewAsync_CleanResponse_ReturnsEmptyIssues` — `{"issues":[],"suggestions":[]}` → both lists empty
+3. `ReviewAsync_IssuesResponse_ReturnsPopulatedLists` — issues and suggestions arrays mapped correctly
+4. `ReviewAsync_MarkdownFencedJson_ParsesCorrectly` — ```json\n{...}\n``` stripped before parse
+5. `ReviewAsync_NullQuery_ThrowsArgumentException`
 
 ---
 
@@ -125,13 +186,14 @@ In `prompts/query_suggestions/CHANGELOG.md` after initial release, add a section
 
 | File | Change |
 |---|---|
-| `appsettings.json` | No change — `Balanced` tier already covers this |
-| `Services/QuerySuggestionService.cs` | New |
-| `prompts/query_suggestions/v1.xml` | New |
-| `prompts/query_suggestions/CHANGELOG.md` | New (extended thinking experiment documented here) |
-| `prompts/query_suggestions/rubric.yaml` | New |
-| `prompts/evals/query_suggestions/golden_set.json` | New |
-| `MainForm.cs` | Debounce timer + `WireAiSuggestions()` + `SuggestionDebounce_Tick` + `ShowAiSuggestions()` |
-| `JobSearchBuilder.Tests/QuerySuggestionServiceTests.cs` | New |
-| `CLAUDE.md` | Phase 4 `[x]` |
+| `Models/QueryReviewResult.cs` | New |
+| `Services/QueryReviewService.cs` | New |
+| `prompts/query_review/v1.xml` | New |
+| `prompts/query_review/CHANGELOG.md` | New |
+| `prompts/query_review/rubric.yaml` | New |
+| `prompts/evals/query_review/golden_set.json` | New |
+| `MainForm.cs` | `_btnReviewQuery`, `_pnlReviewResult`, `btnReviewQuery_Click`, `ShowReviewResult`, `HideReviewResult`, `RebuildQuery` stale-result clear |
+| `JobSearchBuilder.csproj` | Add Compile entries for new model + service |
+| `JobSearchBuilder.Tests/QueryReviewServiceTests.cs` | New |
+| `CLAUDE.md` | Phase 5 `[x]` |
 | `task.md` | Overwrite with this plan |

@@ -1,0 +1,6 @@
+<prompt>
+  <instructions>You are reviewing a generated Google search query for a job seeker. Analyze the query for concrete problems that could reduce search quality, such as excessive length, conflicting terms, overly broad wording, missing operators, malformed site filters, or exclusions that may hide useful jobs.</instructions>
+  <context>The query searches career portals directly with site-scoped ATS domains and combines role, seniority, technology, location, visa, timezone, remote, and exclude terms. The user needs a practical review, not a rewrite of the whole query.</context>
+  <output_format>Return only raw JSON with this exact shape: {"issues":["..."],"suggestions":["..."]}. Use an empty array when there are no issues or suggestions. Do not wrap the JSON in markdown. Do not include prose outside the JSON.</output_format>
+  <constraints>Keep issues concrete and tied to the query text. Keep suggestions actionable and concise. Do not invent user preferences that are not present in the query. Do not recommend removing ATS site filters unless they are malformed or contradictory.</constraints>
+</prompt>

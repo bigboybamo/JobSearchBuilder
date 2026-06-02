@@ -1,0 +1,10 @@
+description: Query review prompt rubric
+criteria:
+  - name: concrete_issues
+    description: Issues identify specific problems visible in the query.
+  - name: actionable_suggestions
+    description: Suggestions are concise improvements the user can apply.
+  - name: json_only
+    description: Response is raw JSON with issues and suggestions arrays.
+  - name: no_invention
+    description: Review does not add preferences that are absent from the query.
