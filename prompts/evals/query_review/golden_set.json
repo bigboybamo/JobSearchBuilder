@@ -1,0 +1,17 @@
+[
+  {
+    "query": "site:greenhouse.io/jobs (\"Senior Developer\" OR \"Software Engineer\") (C# OR .NET) \"remote\" -\"security clearance\"",
+    "expectedIssues": [],
+    "expectedSuggestions": []
+  },
+  {
+    "query": "site:greenhouse.io/jobs site:lever.co/jobs \"developer\" \"intern\" \"senior\" \"entry level\"",
+    "expectedIssues": ["Conflicting seniority terms make the query less focused."],
+    "expectedSuggestions": ["Choose one seniority level before reviewing results."]
+  },
+  {
+    "query": "site:ashbyhq.com \"software\" \"job\" \"career\"",
+    "expectedIssues": ["The role terms are broad and may return noisy results."],
+    "expectedSuggestions": ["Add a specific role or technology term such as Backend Engineer, C#, or Azure."]
+  }
+]

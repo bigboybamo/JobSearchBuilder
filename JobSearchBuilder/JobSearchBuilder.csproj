@@ -191,6 +191,7 @@
     <Compile Include="Models\LlmResponse.cs" />
     <Compile Include="Models\LlmToolDefinition.cs" />
     <Compile Include="Models\QueryProfileResult.cs" />
+    <Compile Include="Models\QueryReviewResult.cs" />
     <Compile Include="Models\JobResult.cs" />
     <Compile Include="Models\SearchProfile.cs" />
     <Compile Include="Models\SearchQuery.cs" />
@@ -203,6 +204,7 @@
     <Compile Include="Services\InMemoryLlmProvider.cs" />
     <Compile Include="Services\NlProfileBuilderService.cs" />
     <Compile Include="Services\PromptLoader.cs" />
+    <Compile Include="Services\QueryReviewService.cs" />
     <Compile Include="Services\QuerySuggestionService.cs" />
     <Compile Include="Services\SqlConnectionFactory.cs" />
     <Compile Include="Services\SqlProfileStore.cs" />
@@ -235,6 +237,10 @@
     </None>
     <None Include="..\prompts\query_suggestions\v1.xml">
       <Link>prompts\query_suggestions\v1.xml</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\prompts\query_review\v1.xml">
+      <Link>prompts\query_review\v1.xml</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Scripts\CreateTables.sql" />
