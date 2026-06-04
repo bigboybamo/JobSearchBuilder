@@ -1,0 +1,17 @@
+description: "JobSearchBuilder — query_suggestions eval (Phase 6)"
+
+prompts:
+  - file://messages.yaml
+
+providers:
+  - id: anthropic:messages:claude-sonnet-4-5-20250929
+    label: anthropic
+  - id: openai:chat:gpt-4.1-mini
+    label: openai
+
+defaultTest:
+  options:
+    provider:
+      id: anthropic:messages:claude-haiku-4-5-20251001
+
+tests: file://../evals/query_suggestions/golden_set.json

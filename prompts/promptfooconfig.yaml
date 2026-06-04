@@ -1,44 +1,23 @@
-description: "JobSearchBuilder — LLM prompt evals (Phase 6)"
+description: "JobSearchBuilder — nl_profile_builder eval (Phase 6)"
 
-# Run from the prompts/ directory: promptfoo eval
-# Requires: ANTHROPIC_API_KEY and OPENAI_API_KEY environment variables
+# Run from the prompts/ directory:
+#   nl_profile_builder:  promptfoo eval
+#   query_review:        promptfoo eval --config query_review/eval.yaml
+#   query_suggestions:   promptfoo eval --config query_suggestions/eval.yaml
+
+prompts:
+  - file://nl_profile_builder/messages.yaml
 
 providers:
   - id: anthropic:messages:claude-sonnet-4-5-20250929
     label: anthropic
-    config:
-      apiKey: "{{ env.ANTHROPIC_API_KEY }}"
   - id: openai:chat:gpt-4.1-mini
     label: openai
-    config:
-      apiKey: "{{ env.OPENAI_API_KEY }}"
 
 # Cheap fast model used only for llm-rubric grading — not the model under test
 defaultTest:
   options:
     provider:
       id: anthropic:messages:claude-haiku-4-5-20251001
-      config:
-        apiKey: "{{ env.ANTHROPIC_API_KEY }}"
 
-scenarios:
-  - description: "nl_profile_builder — extract structured job profile from plain English"
-    config:
-      - prompts:
-          - file://nl_profile_builder/messages.yaml
-    tests:
-      - file://evals/nl_profile_builder/golden_set.json
-
-  - description: "query_review — identify issues and suggestions in a generated query"
-    config:
-      - prompts:
-          - file://query_review/messages.yaml
-    tests:
-      - file://evals/query_review/golden_set.json
-
-  - description: "query_suggestions — suggest relevant keywords by category"
-    config:
-      - prompts:
-          - file://query_suggestions/messages.yaml
-    tests:
-      - file://evals/query_suggestions/golden_set.json
+tests: file://evals/nl_profile_builder/golden_set.json
