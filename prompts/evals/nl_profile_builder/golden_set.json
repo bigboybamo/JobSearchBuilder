@@ -1,13 +1,122 @@
 [
   {
-    "input": "Senior .NET developer, fully remote, UTC+1 or UTC+2, no security clearance",
-    "expected": {
-      "role": "Developer",
-      "seniority": "Senior",
-      "tech_stack": [".NET"],
-      "remote_terms": ["fully remote"],
-      "timezone_terms": ["UTC+1", "UTC+2"],
-      "exclude_terms": ["security clearance"]
-    }
+    "description": "Senior .NET developer — full extraction",
+    "vars": { "description": "Senior .NET developer, fully remote, UTC+1 or UTC+2, no security clearance" },
+    "expected": { "role": "Developer", "seniority": "Senior", "tech_stack": [".NET"], "remote_terms": ["fully remote"], "timezone_terms": ["UTC+1", "UTC+2"], "exclude_terms": ["security clearance"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Developer' or '.NET Developer', seniority is 'Senior', tech_stack contains '.NET', remote_terms contains 'fully remote', timezone_terms contains 'UTC+1' and 'UTC+2', exclude_terms contains 'security clearance'. No invented fields." }]
+  },
+  {
+    "description": "Junior React developer — hybrid, relocation exclusion",
+    "vars": { "description": "Junior React developer, open to hybrid, no relocation required" },
+    "expected": { "role": "Developer", "seniority": "Junior", "tech_stack": ["React"], "remote_terms": ["hybrid"], "timezone_terms": [], "exclude_terms": ["relocation required"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Developer' or 'React Developer', seniority is 'Junior', tech_stack contains 'React', remote_terms contains 'hybrid', exclude_terms contains a relocation-related term. timezone_terms is empty." }]
+  },
+  {
+    "description": "Python data engineer — US timezones expansion",
+    "vars": { "description": "Python data engineer, fully remote, US timezones" },
+    "expected": { "role": "Data Engineer", "seniority": "Any", "tech_stack": ["Python"], "remote_terms": ["fully remote"], "timezone_terms": ["EST", "CST", "PST"], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Data Engineer', seniority is 'Any', tech_stack contains 'Python', remote_terms contains 'fully remote', timezone_terms contains US timezone identifiers such as EST/CST/PST or UTC-5/UTC-6/UTC-8. exclude_terms is empty. No invented technologies." }]
+  },
+  {
+    "description": "Principal backend engineer — Golang, UTC range expansion",
+    "vars": { "description": "Principal backend engineer with Golang, fully remote, UTC-5 to UTC-8" },
+    "expected": { "role": "Backend Engineer", "seniority": "Principal", "tech_stack": ["Golang"], "remote_terms": ["fully remote"], "timezone_terms": ["UTC-5", "UTC-6", "UTC-7", "UTC-8"], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Backend Engineer', seniority is 'Principal', tech_stack contains 'Golang' or 'Go', remote_terms contains 'fully remote', timezone_terms includes UTC-5, UTC-6, UTC-7, and UTC-8 covering the stated range. exclude_terms is empty." }]
+  },
+  {
+    "description": "DevOps engineer — multi-technology, fully remote",
+    "vars": { "description": "DevOps engineer, Kubernetes, Terraform, AWS, fully remote" },
+    "expected": { "role": "DevOps Engineer", "seniority": "Any", "tech_stack": ["Kubernetes", "Terraform", "AWS"], "remote_terms": ["fully remote"], "timezone_terms": [], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'DevOps Engineer', seniority is 'Any', tech_stack contains 'Kubernetes', 'Terraform', and 'AWS', remote_terms contains 'fully remote'. timezone_terms and exclude_terms are empty." }]
+  },
+  {
+    "description": "Full stack developer — dual framework, remote or hybrid",
+    "vars": { "description": "Full stack developer, Vue and Node, remote or hybrid" },
+    "expected": { "role": "Full Stack Developer", "seniority": "Any", "tech_stack": ["Vue.js", "Node.js"], "remote_terms": ["remote", "hybrid"], "timezone_terms": [], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Full Stack Developer' or similar, seniority is 'Any', tech_stack contains Vue-related and Node-related terms, remote_terms contains both a remote term and 'hybrid'. No invented fields." }]
+  },
+  {
+    "description": "Minimal input — no details beyond title",
+    "vars": { "description": "Software engineer" },
+    "expected": { "role": "Software Engineer", "seniority": "Any", "tech_stack": [], "remote_terms": [], "timezone_terms": [], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Software Engineer', seniority is 'Any'. All other arrays (tech_stack, remote_terms, timezone_terms, exclude_terms) must be empty. The model must not invent any details not present in the input." }]
+  },
+  {
+    "description": "Senior iOS developer — platform tech, visa exclusion",
+    "vars": { "description": "Senior iOS developer, Swift and SwiftUI, no visa sponsorship required" },
+    "expected": { "role": "iOS Developer", "seniority": "Senior", "tech_stack": ["Swift", "SwiftUI"], "remote_terms": [], "timezone_terms": [], "exclude_terms": ["visa sponsorship required"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'iOS Developer' or 'Developer', seniority is 'Senior', tech_stack contains 'Swift' and 'SwiftUI', exclude_terms contains a visa sponsorship-related exclusion. remote_terms and timezone_terms are empty." }]
+  },
+  {
+    "description": "Staff engineer — distributed systems, no on-site",
+    "vars": { "description": "Staff engineer, distributed systems and Kafka, no on-site" },
+    "expected": { "role": "Staff Engineer", "seniority": "Staff", "tech_stack": ["Kafka", "distributed systems"], "remote_terms": [], "timezone_terms": [], "exclude_terms": ["on-site"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Staff Engineer', seniority is 'Staff', tech_stack contains 'Kafka' and a distributed systems term, exclude_terms contains 'on-site' or equivalent. remote_terms and timezone_terms are empty." }]
+  },
+  {
+    "description": "Entry level frontend — seniority must not be Any",
+    "vars": { "description": "Entry level frontend developer, HTML, CSS, and JavaScript, open to remote" },
+    "expected": { "role": "Frontend Developer", "seniority": "Junior", "tech_stack": ["HTML", "CSS", "JavaScript"], "remote_terms": ["remote"], "timezone_terms": [], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Frontend Developer', seniority is 'Junior' or 'Entry Level' — must NOT be 'Any' since entry level was stated explicitly, tech_stack contains 'HTML', 'CSS', and 'JavaScript', remote_terms contains 'remote'. exclude_terms is empty." }]
+  },
+  {
+    "description": "C# backend developer — timezone pair, dual exclusion",
+    "vars": { "description": "C# backend developer, Azure, UTC+0 or UTC+1, no clearance, no relocation" },
+    "expected": { "role": "Backend Developer", "seniority": "Any", "tech_stack": ["C#", "Azure"], "remote_terms": [], "timezone_terms": ["UTC+0", "UTC+1"], "exclude_terms": ["security clearance", "relocation"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Backend Developer', seniority is 'Any', tech_stack contains 'C#' and 'Azure', timezone_terms contains 'UTC+0' and 'UTC+1', exclude_terms contains a clearance-related term and a relocation-related term. remote_terms is empty." }]
+  },
+  {
+    "description": "Data scientist — broad tech stack, remote preferred",
+    "vars": { "description": "Data scientist, Python and R, machine learning, remote preferred" },
+    "expected": { "role": "Data Scientist", "seniority": "Any", "tech_stack": ["Python", "R", "machine learning"], "remote_terms": ["remote"], "timezone_terms": [], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Data Scientist', seniority is 'Any', tech_stack contains 'Python', 'R', and a machine learning term, remote_terms contains 'remote' or 'remote preferred'. timezone_terms and exclude_terms are empty." }]
+  },
+  {
+    "description": "Senior software architect — dual exclusion, no remote preference",
+    "vars": { "description": "Senior software architect, .NET and Azure, no relocation, no on-site" },
+    "expected": { "role": "Software Architect", "seniority": "Senior", "tech_stack": [".NET", "Azure"], "remote_terms": [], "timezone_terms": [], "exclude_terms": ["relocation", "on-site"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Software Architect', seniority is 'Senior', tech_stack contains '.NET' and 'Azure', exclude_terms contains relocation and on-site terms. remote_terms and timezone_terms are empty." }]
+  },
+  {
+    "description": "Android developer — fully remote only, no contract",
+    "vars": { "description": "Android developer, Kotlin, fully remote only, no contract roles" },
+    "expected": { "role": "Android Developer", "seniority": "Any", "tech_stack": ["Kotlin"], "remote_terms": ["fully remote"], "timezone_terms": [], "exclude_terms": ["contract"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Android Developer', seniority is 'Any', tech_stack contains 'Kotlin', remote_terms contains 'fully remote', exclude_terms contains 'contract'. timezone_terms is empty." }]
+  },
+  {
+    "description": "Site reliability engineer — multi-tech, single timezone",
+    "vars": { "description": "Site reliability engineer, Linux, AWS, and Python, fully remote, UTC+0" },
+    "expected": { "role": "Site Reliability Engineer", "seniority": "Any", "tech_stack": ["Linux", "AWS", "Python"], "remote_terms": ["fully remote"], "timezone_terms": ["UTC+0"], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Site Reliability Engineer' or 'SRE', seniority is 'Any', tech_stack contains 'Linux', 'AWS', and 'Python', remote_terms contains 'fully remote', timezone_terms contains 'UTC+0'. exclude_terms is empty." }]
+  },
+  {
+    "description": "Mid-level mobile developer — React Native, hybrid",
+    "vars": { "description": "Mid-level mobile developer, React Native, hybrid acceptable" },
+    "expected": { "role": "Mobile Developer", "seniority": "Mid", "tech_stack": ["React Native"], "remote_terms": ["hybrid"], "timezone_terms": [], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Mobile Developer', seniority is 'Mid' or 'Mid-level', tech_stack contains 'React Native', remote_terms contains 'hybrid'. timezone_terms and exclude_terms are empty." }]
+  },
+  {
+    "description": "Cloud engineer — dual cloud, UTC range",
+    "vars": { "description": "Cloud engineer, Azure and GCP, fully remote, UTC+0 to UTC+2" },
+    "expected": { "role": "Cloud Engineer", "seniority": "Any", "tech_stack": ["Azure", "GCP"], "remote_terms": ["fully remote"], "timezone_terms": ["UTC+0", "UTC+1", "UTC+2"], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Cloud Engineer', seniority is 'Any', tech_stack contains 'Azure' and 'GCP', remote_terms contains 'fully remote', timezone_terms includes UTC+0, UTC+1, and UTC+2. exclude_terms is empty." }]
+  },
+  {
+    "description": "QA automation engineer — tool stack, role exclusion",
+    "vars": { "description": "QA automation engineer, Selenium and Cypress, no manual testing roles" },
+    "expected": { "role": "QA Automation Engineer", "seniority": "Any", "tech_stack": ["Selenium", "Cypress"], "remote_terms": [], "timezone_terms": [], "exclude_terms": ["manual testing"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'QA Automation Engineer' or similar, seniority is 'Any', tech_stack contains 'Selenium' and 'Cypress', exclude_terms contains a manual testing exclusion. remote_terms and timezone_terms are empty." }]
+  },
+  {
+    "description": "Engineering manager — non-IC, fully remote",
+    "vars": { "description": "Engineering manager, not an individual contributor role, fully remote" },
+    "expected": { "role": "Engineering Manager", "seniority": "Any", "tech_stack": [], "remote_terms": ["fully remote"], "timezone_terms": [], "exclude_terms": ["individual contributor"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Engineering Manager', seniority is 'Any', tech_stack is empty, remote_terms contains 'fully remote', exclude_terms contains 'individual contributor' or 'IC'. timezone_terms is empty." }]
+  },
+  {
+    "description": "Senior ML engineer — dual framework, credential exclusion",
+    "vars": { "description": "Senior machine learning engineer, PyTorch and TensorFlow, no PhD required" },
+    "expected": { "role": "Machine Learning Engineer", "seniority": "Senior", "tech_stack": ["PyTorch", "TensorFlow"], "remote_terms": [], "timezone_terms": [], "exclude_terms": ["PhD required"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Machine Learning Engineer' or 'ML Engineer', seniority is 'Senior', tech_stack contains 'PyTorch' and 'TensorFlow', exclude_terms contains a PhD-related exclusion. remote_terms and timezone_terms are empty." }]
   }
 ]

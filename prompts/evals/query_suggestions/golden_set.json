@@ -1,26 +1,122 @@
 [
   {
-    "category": "Tech Stack",
-    "existingKeywords": ["C#", ".NET"],
-    "partialInput": "azure",
-    "expectedSuggestions": ["Azure Functions", "Azure App Service", "Azure DevOps"]
+    "description": "Tech Stack — Azure suggestions for .NET project",
+    "vars": { "category": "Tech Stack", "existingKeywords": "C#, .NET", "partialInput": "azure" },
+    "expectedSuggestions": ["Azure Functions", "Azure App Service", "Azure DevOps"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be Azure-related technologies appropriate for a .NET stack (e.g. Azure Functions, Azure App Service, Azure DevOps). Must not repeat C# or .NET. At most 5 suggestions." }]
   },
   {
-    "category": "Role",
-    "existingKeywords": ["Developer"],
-    "partialInput": "platform",
-    "expectedSuggestions": ["Platform Engineer", "Backend Engineer"]
+    "description": "Role — platform engineer suggestions from partial",
+    "vars": { "category": "Role", "existingKeywords": "Developer", "partialInput": "platform" },
+    "expectedSuggestions": ["Platform Engineer", "Backend Engineer"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be job role titles that include or relate to 'platform'. Must not repeat 'Developer'. At most 5 suggestions, each 1-3 words." }]
   },
   {
-    "category": "Remote",
-    "existingKeywords": ["Remote"],
-    "partialInput": "",
-    "expectedSuggestions": ["Fully Remote", "Work from Home"]
+    "description": "Remote — suggestions from empty partial",
+    "vars": { "category": "Remote", "existingKeywords": "Remote", "partialInput": "" },
+    "expectedSuggestions": ["Fully Remote", "Work from Home"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be remote work terms (e.g. Fully Remote, Work from Home, Distributed). Must not repeat 'Remote'. At most 5 suggestions." }]
   },
   {
-    "category": "Exclude Terms",
-    "existingKeywords": ["security clearance"],
-    "partialInput": "senior",
-    "expectedSuggestions": ["principal", "staff"]
+    "description": "Exclude Terms — seniority level exclusions",
+    "vars": { "category": "Exclude Terms", "existingKeywords": "security clearance", "partialInput": "senior" },
+    "expectedSuggestions": ["principal", "staff"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be seniority-related terms that someone would exclude (e.g. principal, staff, senior required). Must not repeat 'security clearance'. At most 5 suggestions." }]
+  },
+  {
+    "description": "Tech Stack — Next.js and related for React project",
+    "vars": { "category": "Tech Stack", "existingKeywords": "React, JavaScript", "partialInput": "next" },
+    "expectedSuggestions": ["Next.js", "TypeScript", "Node.js", "Nuxt.js"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must match the 'next' partial and be relevant to a React/JavaScript stack (e.g. Next.js, TypeScript, Nuxt.js). Must not repeat React or JavaScript. At most 5 suggestions." }]
+  },
+  {
+    "description": "Tech Stack — data tools for Python/Django project",
+    "vars": { "category": "Tech Stack", "existingKeywords": "Python, Django", "partialInput": "data" },
+    "expectedSuggestions": ["pandas", "Apache Spark", "dbt", "NumPy"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be data-related Python tools (e.g. pandas, Apache Spark, dbt, NumPy). Must not repeat Python or Django. At most 5 suggestions." }]
+  },
+  {
+    "description": "Role — data roles from empty existing list",
+    "vars": { "category": "Role", "existingKeywords": "", "partialInput": "data" },
+    "expectedSuggestions": ["Data Engineer", "Data Scientist", "Data Analyst", "Analytics Engineer", "Data Platform Engineer"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be job role titles that start with or include 'data'. No existing keywords to avoid repeating. At most 5 suggestions, each a valid job title." }]
+  },
+  {
+    "description": "Role — related engineering roles from empty partial",
+    "vars": { "category": "Role", "existingKeywords": "Backend Engineer", "partialInput": "" },
+    "expectedSuggestions": ["Platform Engineer", "Systems Engineer", "Cloud Engineer", "Site Reliability Engineer", "API Engineer"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be engineering role titles related to backend work. Must not repeat 'Backend Engineer'. At most 5 suggestions." }]
+  },
+  {
+    "description": "Visa — suggestions from empty list and empty partial",
+    "vars": { "category": "Visa", "existingKeywords": "", "partialInput": "" },
+    "expectedSuggestions": ["no sponsorship required", "visa sponsorship available", "H1B welcome", "open to all visas"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be visa or sponsorship-related terms suitable for a job search chip (e.g. no sponsorship required, H1B welcome). At most 5 suggestions, 1-3 words each." }]
+  },
+  {
+    "description": "Visa — clearance-related exclusions from partial",
+    "vars": { "category": "Visa", "existingKeywords": "no sponsorship required", "partialInput": "clear" },
+    "expectedSuggestions": ["no clearance", "no security clearance", "no polygraph"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must match the 'clear' partial and relate to clearance exclusions. Must not repeat 'no sponsorship required'. At most 5 suggestions." }]
+  },
+  {
+    "description": "Timezone — UTC suggestions from partial",
+    "vars": { "category": "Timezone", "existingKeywords": "", "partialInput": "UTC" },
+    "expectedSuggestions": ["UTC+0", "UTC+1", "UTC+2", "UTC-5", "UTC-8"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be UTC timezone identifiers that match the 'UTC' prefix. At most 5 suggestions. No existing keywords to avoid." }]
+  },
+  {
+    "description": "Timezone — EST and related from partial",
+    "vars": { "category": "Timezone", "existingKeywords": "UTC+0, UTC+1", "partialInput": "EST" },
+    "expectedSuggestions": ["EST", "Eastern Time", "GMT", "BST"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must match or relate to the 'EST' partial and be timezone identifiers. Must not repeat UTC+0 or UTC+1. At most 5 suggestions." }]
+  },
+  {
+    "description": "Exclude Terms — relocation suggestions from partial",
+    "vars": { "category": "Exclude Terms", "existingKeywords": "", "partialInput": "relo" },
+    "expectedSuggestions": ["relocation required", "must relocate", "on-site required"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must match the 'relo' partial and be exclusion phrases related to relocation (e.g. relocation required, must relocate). At most 5 suggestions." }]
+  },
+  {
+    "description": "Exclude Terms — additional exclusions from empty partial",
+    "vars": { "category": "Exclude Terms", "existingKeywords": "security clearance", "partialInput": "" },
+    "expectedSuggestions": ["polygraph", "relocation required", "on-site only", "visa required"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be common job search exclusion phrases. Must not repeat 'security clearance'. At most 5 suggestions." }]
+  },
+  {
+    "description": "Tech Stack — cloud tools for Java/Spring project",
+    "vars": { "category": "Tech Stack", "existingKeywords": "Java, Spring", "partialInput": "cloud" },
+    "expectedSuggestions": ["AWS", "Google Cloud Platform", "Azure", "Kubernetes", "Docker"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be cloud-related technologies that pair well with Java/Spring. Must not repeat Java or Spring. At most 5 suggestions." }]
+  },
+  {
+    "description": "Role — cloud and infra roles from partial",
+    "vars": { "category": "Role", "existingKeywords": "DevOps Engineer", "partialInput": "cloud" },
+    "expectedSuggestions": ["Cloud Engineer", "Cloud Architect", "Site Reliability Engineer", "Platform Engineer"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be role titles matching the 'cloud' partial or closely related. Must not repeat 'DevOps Engineer'. At most 5 suggestions." }]
+  },
+  {
+    "description": "Timezone — additional US timezones from empty partial",
+    "vars": { "category": "Timezone", "existingKeywords": "EST, PST", "partialInput": "" },
+    "expectedSuggestions": ["CST", "MST", "UTC-6", "UTC-7", "GMT"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be timezone identifiers not already listed. Must not repeat EST or PST. At most 5 suggestions." }]
+  },
+  {
+    "description": "Tech Stack — frontend framework suggestions from partial",
+    "vars": { "category": "Tech Stack", "existingKeywords": "", "partialInput": "front" },
+    "expectedSuggestions": ["React", "Vue.js", "Angular", "Next.js", "TypeScript"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be frontend technologies matching the 'front' partial or commonly used in frontend development. No existing keywords to avoid. At most 5 suggestions." }]
+  },
+  {
+    "description": "Visa — sponsorship terms from partial",
+    "vars": { "category": "Visa", "existingKeywords": "no clearance, no polygraph", "partialInput": "sponsor" },
+    "expectedSuggestions": ["sponsorship available", "no sponsorship required", "H1B accepted"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must match the 'sponsor' partial and be visa sponsorship-related terms. Must not repeat 'no clearance' or 'no polygraph'. At most 5 suggestions." }]
+  },
+  {
+    "description": "Exclude Terms — employment type exclusions from partial",
+    "vars": { "category": "Exclude Terms", "existingKeywords": "relocation required", "partialInput": "part" },
+    "expectedSuggestions": ["part-time", "contract only", "freelance", "temporary"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must match the 'part' partial or be employment type exclusions. Must not repeat 'relocation required'. At most 5 suggestions." }]
   }
 ]
