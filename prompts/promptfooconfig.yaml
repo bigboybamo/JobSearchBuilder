@@ -1,0 +1,23 @@
+description: "JobSearchBuilder — nl_profile_builder eval (Phase 6)"
+
+# Run from the prompts/ directory:
+#   nl_profile_builder:  promptfoo eval
+#   query_review:        promptfoo eval --config query_review/eval.yaml
+#   query_suggestions:   promptfoo eval --config query_suggestions/eval.yaml
+
+prompts:
+  - file://nl_profile_builder/messages.yaml
+
+providers:
+  - id: anthropic:messages:claude-sonnet-4-5-20250929
+    label: anthropic
+  - id: openai:chat:gpt-4.1-mini
+    label: openai
+
+# Cheap fast model used only for llm-rubric grading — not the model under test
+defaultTest:
+  options:
+    provider:
+      id: anthropic:messages:claude-haiku-4-5-20251001
+
+tests: file://evals/nl_profile_builder/golden_set.json

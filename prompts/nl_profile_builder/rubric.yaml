@@ -1,6 +1,8 @@
 criteria:
   - name: Uses tool shape
     description: The response should map cleanly to role, seniority, tech_stack, remote_terms, timezone_terms, and exclude_terms.
+  - name: Correct mapping
+    description: The extracted values should match what is stated in the input — role matches the stated job title, seniority matches the implied level, tech_stack contains the mentioned technologies, remote_terms reflect the stated work arrangement, timezone_terms match the stated timezones, and exclude_terms capture the stated exclusions.
   - name: Avoids invention
     description: The response should not add technologies, locations, visa terms, or constraints absent from the input.
   - name: Search usefulness

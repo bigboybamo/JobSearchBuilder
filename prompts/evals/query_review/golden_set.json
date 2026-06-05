@@ -1,17 +1,135 @@
 [
   {
-    "query": "site:greenhouse.io/jobs (\"Senior Developer\" OR \"Software Engineer\") (C# OR .NET) \"remote\" -\"security clearance\"",
+    "description": "Well-formed query — role, tech, exclusion",
+    "vars": { "query": "site:greenhouse.io/jobs (\"Senior Developer\" OR \"Software Engineer\") (C# OR .NET) \"remote\" -\"security clearance\"" },
     "expectedIssues": [],
-    "expectedSuggestions": []
+    "expectedSuggestions": [],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. Both 'issues' and 'suggestions' must be empty arrays. The query has clear role terms, technology terms, a valid ATS site filter, and a properly quoted exclusion." }]
   },
   {
-    "query": "site:greenhouse.io/jobs site:lever.co/jobs \"developer\" \"intern\" \"senior\" \"entry level\"",
+    "description": "Well-formed query — remote with timezone",
+    "vars": { "query": "site:lever.co/jobs site:greenhouse.io/jobs (\"Software Engineer\" OR \"Backend Engineer\") (Python OR Django) \"remote\" (UTC+0 OR UTC+1 OR UTC+2)" },
+    "expectedIssues": [],
+    "expectedSuggestions": [],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. Both 'issues' and 'suggestions' must be empty arrays. The query is well-structured with role terms, technology terms, timezone terms, and valid site filters." }]
+  },
+  {
+    "description": "Well-formed query — multi-ATS, visa exclusions",
+    "vars": { "query": "site:workable.com/jobs site:ashbyhq.com (\"Senior Engineer\" OR \"Staff Engineer\") (Golang OR Go) \"fully remote\" -\"clearance\" -\"sponsorship not available\"" },
+    "expectedIssues": [],
+    "expectedSuggestions": [],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. Both 'issues' and 'suggestions' must be empty arrays. The query has no structural problems." }]
+  },
+  {
+    "description": "Well-formed query — data engineering, multi-ATS",
+    "vars": { "query": "site:greenhouse.io/jobs site:lever.co/jobs site:workable.com/jobs (\"Data Engineer\" OR \"Data Platform Engineer\") (Spark OR dbt OR Airflow) \"remote\" -\"clearance\"" },
+    "expectedIssues": [],
+    "expectedSuggestions": [],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. Both 'issues' and 'suggestions' must be empty arrays. The query is well-formed." }]
+  },
+  {
+    "description": "Well-formed query — cloud engineering with timezone range",
+    "vars": { "query": "site:ashbyhq.com site:greenhouse.io/jobs (\"Cloud Engineer\" OR \"DevOps Engineer\") (Terraform OR Kubernetes OR AWS) \"remote\" (UTC-5 OR UTC-6 OR UTC-7 OR UTC-8)" },
+    "expectedIssues": [],
+    "expectedSuggestions": [],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. Both 'issues' and 'suggestions' must be empty arrays. The query is well-structured." }]
+  },
+  {
+    "description": "Conflicting seniority terms",
+    "vars": { "query": "site:greenhouse.io/jobs site:lever.co/jobs \"developer\" \"intern\" \"senior\" \"entry level\"" },
     "expectedIssues": ["Conflicting seniority terms make the query less focused."],
-    "expectedSuggestions": ["Choose one seniority level before reviewing results."]
+    "expectedSuggestions": ["Choose one seniority level before reviewing results."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must mention conflicting or mixed seniority terms (intern, senior, entry level together). The 'suggestions' array must recommend narrowing to a single seniority level." }]
   },
   {
-    "query": "site:ashbyhq.com \"software\" \"job\" \"career\"",
+    "description": "Overly broad role terms — no specificity",
+    "vars": { "query": "site:ashbyhq.com \"software\" \"job\" \"career\"" },
     "expectedIssues": ["The role terms are broad and may return noisy results."],
-    "expectedSuggestions": ["Add a specific role or technology term such as Backend Engineer, C#, or Azure."]
+    "expectedSuggestions": ["Add a specific role or technology term such as Backend Engineer, C#, or Azure."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must note that the query lacks specific role or technology terms. The 'suggestions' array must recommend adding a concrete role or tech term." }]
+  },
+  {
+    "description": "Contradictory work arrangement terms",
+    "vars": { "query": "site:greenhouse.io/jobs (\"Software Engineer\") (Java OR Spring) \"remote\" \"on-site\" \"hybrid\"" },
+    "expectedIssues": ["Mixing remote, on-site, and hybrid terms is contradictory."],
+    "expectedSuggestions": ["Choose one work arrangement term to keep results focused."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must identify the contradiction between remote, on-site, and hybrid terms. The 'suggestions' array must recommend choosing a single work arrangement." }]
+  },
+  {
+    "description": "No explicit role term — technology only",
+    "vars": { "query": "site:lever.co/jobs site:greenhouse.io/jobs (React OR Vue OR Angular) \"senior\" \"remote\"" },
+    "expectedIssues": ["No explicit role term — the query relies only on technology names."],
+    "expectedSuggestions": ["Add a role term such as Frontend Developer or Software Engineer."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must note the absence of an explicit role title. The 'suggestions' array must recommend adding a role term." }]
+  },
+  {
+    "description": "Duplicate technology term",
+    "vars": { "query": "site:greenhouse.io/jobs (\"Backend Engineer\") (C# OR .NET OR C# OR dotnet) \"senior\" \"remote\"" },
+    "expectedIssues": ["C# appears twice, creating a redundant term."],
+    "expectedSuggestions": ["Remove the duplicate C# to keep the query clean."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must identify the duplicate C# term. The 'suggestions' array must recommend removing the duplicate." }]
+  },
+  {
+    "description": "Malformed site filter — missing /jobs path",
+    "vars": { "query": "site:greenhouse.io (\"Senior Developer\") (Python OR Django) \"remote\"" },
+    "expectedIssues": ["The site filter is missing the /jobs path and may return non-job pages."],
+    "expectedSuggestions": ["Use site:greenhouse.io/jobs to restrict results to job listings."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must flag that 'site:greenhouse.io' is missing the '/jobs' path. The 'suggestions' array must recommend adding the path." }]
+  },
+  {
+    "description": "Unquoted multi-word phrases",
+    "vars": { "query": "site:greenhouse.io/jobs (Software Engineer OR Backend Developer) C# .NET remote -security clearance" },
+    "expectedIssues": ["Multi-word phrases are not quoted and may not match correctly."],
+    "expectedSuggestions": ["Wrap multi-word phrases such as Software Engineer and security clearance in double quotes."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must flag that multi-word phrases like 'Software Engineer' and 'security clearance' lack quotes. The 'suggestions' array must recommend quoting them." }]
+  },
+  {
+    "description": "Excessive role and tech alternatives — query length risk",
+    "vars": { "query": "site:greenhouse.io/jobs site:lever.co/jobs site:ashbyhq.com site:workable.com/jobs (\"Software Engineer\" OR \"Backend Engineer\" OR \"Full Stack Developer\" OR \"Web Developer\" OR \"Application Developer\" OR \"Systems Engineer\") (Java OR Python OR C# OR Go OR Ruby OR Scala OR Kotlin OR Swift OR JavaScript OR TypeScript OR Rust) \"remote\" \"senior\"" },
+    "expectedIssues": ["Too many role and technology alternatives may exceed Google query length limits or return overly broad results."],
+    "expectedSuggestions": ["Narrow to 2-3 role terms and 3-4 technology terms most relevant to the target role."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must flag excessive query length or too many alternatives. The 'suggestions' array must recommend narrowing the role and technology terms." }]
+  },
+  {
+    "description": "No site filter — open web search",
+    "vars": { "query": "(\"Senior Software Engineer\" OR \"Principal Engineer\") (Rust OR C++) \"fully remote\" -\"relocation required\"" },
+    "expectedIssues": ["No site: filter — this searches the open web rather than ATS career portals."],
+    "expectedSuggestions": ["Add site: filters such as site:greenhouse.io/jobs or site:lever.co/jobs to target ATS platforms."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must flag the absence of any site: filter. The 'suggestions' array must recommend adding ATS site filters." }]
+  },
+  {
+    "description": "Contradictory visa terms",
+    "vars": { "query": "site:greenhouse.io/jobs (\"Software Engineer\") (Python OR FastAPI) -\"visa sponsorship required\" \"sponsorship available\"" },
+    "expectedIssues": ["Visa terms are contradictory — excluding visa sponsorship required while including sponsorship available."],
+    "expectedSuggestions": ["Keep only the exclusion if you do not need sponsorship, or only the inclusion if you do."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must identify the contradiction between the visa exclusion and the positive visa term. The 'suggestions' array must recommend keeping only one." }]
+  },
+  {
+    "description": "Role term in exclusions — suppresses relevant listings",
+    "vars": { "query": "site:lever.co/jobs site:greenhouse.io/jobs (Python OR Django) \"remote\" -\"Backend Engineer\" -\"clearance\"" },
+    "expectedIssues": ["Backend Engineer appears as an excluded term and will suppress listings that use that title."],
+    "expectedSuggestions": ["Move role terms to the main query instead of the exclusions."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must flag that a job role title (Backend Engineer) is being excluded. The 'suggestions' array must recommend moving it to the main query." }]
+  },
+  {
+    "description": "Redundant remote synonyms",
+    "vars": { "query": "site:greenhouse.io/jobs (\"Software Engineer\") \"remote\" \"fully remote\" \"work from home\" \"distributed\" \"async\"" },
+    "expectedIssues": ["Multiple remote synonyms are redundant — any one is sufficient."],
+    "expectedSuggestions": ["Keep one or two remote terms and remove the rest to reduce query noise."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must note the redundancy of listing many remote synonyms. The 'suggestions' array must recommend reducing to one or two." }]
+  },
+  {
+    "description": "Well-formed query — humanitarian org site filters with tech role",
+    "vars": { "query": "site:careers.un.org site:jobs.unicef.org site:www.wfp.org/careers (\"Software Engineer\" OR \"Data Engineer\") \"remote\" (UTC+2 OR UTC+3)" },
+    "expectedIssues": [],
+    "expectedSuggestions": [],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. Both 'issues' and 'suggestions' must be empty arrays. The query is well-structured with specific role terms, remote preference, timezone terms, and valid site filters targeting international organisation career portals." }]
+  },
+  {
+    "description": "Humanitarian site filter — exclusion suppresses all target org results",
+    "vars": { "query": "site:careers.un.org site:jobs.unicef.org (\"Software Engineer\" OR \"Data Analyst\") (Python OR Java) \"remote\" -\"international development\"" },
+    "expectedIssues": ["Excluding 'international development' will suppress listings from international development organisations, defeating the purpose of targeting those career portals."],
+    "expectedSuggestions": ["Remove the 'international development' exclusion when targeting international organisation career portals."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must flag that excluding 'international development' is counterproductive when the site filters target international development organisation career portals. The 'suggestions' array must recommend removing that exclusion." }]
   }
 ]
