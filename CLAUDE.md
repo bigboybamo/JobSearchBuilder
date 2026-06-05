@@ -266,7 +266,7 @@ Steps: NuGet restore → dotnet restore → build test project → run tests.
 - [x] Phase 3 — `feature/prompt-caching`
 - [x] Phase 4 — `feature/query-suggestions`
 - [x] Phase 5 — `feature/query-review`
-- [ ] Phase 6 — `feature/eval-pipeline`
+- [x] Phase 6 — `feature/eval-pipeline`
 - [ ] Phase 7 — `feature/batch-profiles`
 
 Mark phases `[x]` as they are merged to master. When starting a session, Claude reads the first unchecked phase as the current one.

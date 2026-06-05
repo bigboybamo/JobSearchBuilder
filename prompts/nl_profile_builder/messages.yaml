@@ -16,7 +16,9 @@
         Use the user's wording when it is already searchable.
         Keep arrays deduplicated.
         Put job titles in role, not tech_stack.
-        Use seniority only when the user implies it; otherwise return Any.
+        Use seniority only when the user explicitly states a level such as Junior, Mid, Senior, Lead, Principal, or Staff; otherwise return Any.
+        Management and leadership titles (Engineering Manager, Director, VP, Head of) are roles, not seniority levels — always return seniority: "Any" for these titles unless a seniority qualifier is also stated.
+        Only populate remote_terms when the user explicitly states a work-arrangement preference (remote, hybrid, fully remote, on-site, in-office, etc.). Do not infer remote_terms from a negative exclusion alone — if the user says "no on-site" or "no relocation", put that phrase in exclude_terms instead.
         Do not invent locations, employers, visa terms, or technologies that the user did not imply.
       </constraints>
     </prompt>

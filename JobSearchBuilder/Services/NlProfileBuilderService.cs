@@ -30,7 +30,7 @@ namespace JobSearchBuilder.Services
 
             LlmRequest request = new LlmRequest
             {
-                SystemPrompt = _promptLoader.Load("nl_profile_builder", "v1"),
+                SystemPrompt = _promptLoader.Load("nl_profile_builder", "v2"),
                 UserMessage = description.Trim(),
                 ForceToolName = ToolName,
                 ModelTier = "Balanced",

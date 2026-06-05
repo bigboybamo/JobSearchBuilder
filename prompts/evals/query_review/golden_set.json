@@ -117,5 +117,19 @@
     "expectedIssues": ["Multiple remote synonyms are redundant — any one is sufficient."],
     "expectedSuggestions": ["Keep one or two remote terms and remove the rest to reduce query noise."],
     "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must note the redundancy of listing many remote synonyms. The 'suggestions' array must recommend reducing to one or two." }]
+  },
+  {
+    "description": "Well-formed query — humanitarian org site filters with tech role",
+    "vars": { "query": "site:careers.un.org site:jobs.unicef.org site:www.wfp.org/careers (\"Software Engineer\" OR \"Data Engineer\") \"remote\" (UTC+2 OR UTC+3)" },
+    "expectedIssues": [],
+    "expectedSuggestions": [],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. Both 'issues' and 'suggestions' must be empty arrays. The query is well-structured with specific role terms, remote preference, timezone terms, and valid site filters targeting international organisation career portals." }]
+  },
+  {
+    "description": "Humanitarian site filter — exclusion suppresses all target org results",
+    "vars": { "query": "site:careers.un.org site:jobs.unicef.org (\"Software Engineer\" OR \"Data Analyst\") (Python OR Java) \"remote\" -\"international development\"" },
+    "expectedIssues": ["Excluding 'international development' will suppress listings from international development organisations, defeating the purpose of targeting those career portals."],
+    "expectedSuggestions": ["Remove the 'international development' exclusion when targeting international organisation career portals."],
+    "assert": [{ "type": "llm-rubric", "value": "Response must be valid JSON. The 'issues' array must flag that excluding 'international development' is counterproductive when the site filters target international development organisation career portals. The 'suggestions' array must recommend removing that exclusion." }]
   }
 ]

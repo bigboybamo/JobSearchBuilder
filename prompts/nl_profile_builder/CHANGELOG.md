@@ -1,5 +1,38 @@
 # nl_profile_builder Prompt Changelog
 
+## v2 — Seniority and remote_terms constraint fixes (2026-06-05)
+
+**Changes from v1:**
+1. Clarified that seniority uses explicit level words only (Junior, Mid, Senior, Lead, Principal, Staff) — "otherwise return Any"
+2. Added explicit rule: management/leadership titles (Engineering Manager, Director, VP, Head of) are roles, not seniority levels — always return `seniority: "Any"` unless a seniority qualifier is also stated
+3. Added explicit rule: only populate `remote_terms` when the user explicitly states a work-arrangement preference — do not infer from a negative exclusion; put "no on-site" / "no relocation" in `exclude_terms` instead
+
+**Eval results vs v1 baseline:**
+
+| Provider | v1 | v2 | Change |
+|---|---|---|---|
+| Anthropic | 16/20 (80%) | **19/20 (95%)** | +15pp |
+| OpenAI | 11/20 (55%) | **12/20 (60%)** | +5pp |
+| Overall | 27/40 (67.5%) | **31/40 (77.5%)** | +10pp |
+
+**What improved:**
+- Both models now correctly return `seniority: "Any"` for Engineering Manager
+- Anthropic now correctly puts "no on-site" in `exclude_terms` instead of inventing `remote_terms`
+- OpenAI Staff engineer "no on-site" case also now passes
+
+**Remaining Anthropic failure (1):**
+- `C# backend developer` — still adding `remote_terms: ["remote"]` when input only states "no clearance, no relocation". The constraint is partially effective; this edge case may need a more explicit example in the prompt.
+
+**Remaining OpenAI failures (8):**
+- Field category confusion (e.g. `seniority` returned as array instead of string, `"data engineer"` in `tech_stack`)
+- Truncated exclusion phrases ("visa sponsorship" instead of "visa sponsorship required")
+- Still occasionally invents `remote_terms` from exclusions (`Senior software architect` case)
+- These are structural compliance issues with the schema; prompt wording alone has limited impact on gpt-4.1-mini
+
+**v2 is the new active prompt.** The 80%→95% Anthropic improvement confirms both constraint fixes were correct.
+
+---
+
 ## Phase 6 — Eval Pipeline Baseline (2026-06-04)
 
 **Eval run:** `promptfoo eval` against `evals/nl_profile_builder/golden_set.json` (20 test cases)

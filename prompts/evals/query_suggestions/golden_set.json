@@ -118,5 +118,11 @@
     "vars": { "category": "Exclude Terms", "existingKeywords": "relocation required", "partialInput": "part" },
     "expectedSuggestions": ["part-time", "contract only", "freelance", "temporary"],
     "assert": [{ "type": "llm-rubric", "value": "Suggestions must match the 'part' partial or be employment type exclusions. Must not repeat 'relocation required'. At most 5 suggestions." }]
+  },
+  {
+    "description": "Timezone — African timezone identifiers from partial",
+    "vars": { "category": "Timezone", "existingKeywords": "UTC+1", "partialInput": "Africa" },
+    "expectedSuggestions": ["WAT", "EAT", "CAT", "West Africa Time", "East Africa Time"],
+    "assert": [{ "type": "llm-rubric", "value": "Suggestions must be African timezone identifiers or named zones relevant to the 'Africa' partial — such as WAT (West Africa Time, UTC+1), EAT (East Africa Time, UTC+3), CAT (Central Africa Time, UTC+2). Must not repeat UTC+1. At most 5 suggestions." }]
   }
 ]
