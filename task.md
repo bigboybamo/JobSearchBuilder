@@ -1,122 +1,247 @@
-# Session Handoff — Phase 6 Eval Pipeline
+# Phase 7 — Batch Profile Generation
 
-**Branch:** `feature/eval-pipeline`  
-**Last session date:** 2026-06-04
+**Branch:** `feature/batch-profiles`
 
 ---
 
-## What Was Done This Session
+## Goal
 
-### Eval pipeline built and running
-- Expanded all three golden sets to Promptfoo-native format (`vars` + `llm-rubric assert`):
-  - `prompts/evals/nl_profile_builder/golden_set.json` — 20 cases
-  - `prompts/evals/query_review/golden_set.json` — 17 cases
-  - `prompts/evals/query_suggestions/golden_set.json` — 20 cases
-- Added `correct_mapping` criterion to `prompts/nl_profile_builder/rubric.yaml`
-- Created `messages.yaml` per prompt (Promptfoo needs system + user message structure):
-  - `prompts/nl_profile_builder/messages.yaml`
-  - `prompts/query_review/messages.yaml`
-  - `prompts/query_suggestions/messages.yaml`
-- Fixed `promptfooconfig.yaml` — dropped broken scenarios format; now runs `nl_profile_builder` by default
-- Created separate `eval.yaml` for the other two prompts:
-  - `prompts/query_review/eval.yaml`
-  - `prompts/query_suggestions/eval.yaml`
-- **Ran the nl_profile_builder eval successfully — baseline scores recorded**
+Add a "Bulk Describe" button that accepts multiple plain-English role descriptions (one per line), calls the LLM in the most efficient way for the active provider, then shows a results dialog where the user can apply or save each result as a new profile.
 
-### Baseline eval results (nl_profile_builder, 2026-06-04)
-| Provider | Model | Score |
+---
+
+## Files to Create
+
+### 1. `JobSearchBuilder/Models/BatchProfileResult.cs` ✅ DONE
+
+Plain data bag: `Description`, `Profile` (QueryProfileResult), `IsError`, `ErrorMessage`.
+
+---
+
+### 2. `JobSearchBuilder/Services/BatchProfileBuilderService.cs`
+
+**Constructor:**
+```
+BatchProfileBuilderService(
+    ILlmProvider provider,
+    PromptLoader promptLoader,
+    AppSettings settings,
+    HttpMessageHandler handler = null,
+    int pollIntervalMs = 5000)
+```
+- `handler` injected for testability (same pattern as `AnthropicProvider`)
+- `pollIntervalMs` defaults to 5000; pass 0 in tests to skip actual delay
+
+**Public method:**
+```
+Task<List<BatchProfileResult>> BuildBatchAsync(IList<string> descriptions)
+```
+- Validates: throws `ArgumentNullException` if null, returns empty list if empty
+- Branches on `_provider.ProviderName == "Anthropic"`:
+  - `"Anthropic"` → `BuildWithAnthropicBatchAsync`
+  - Anything else → `BuildInParallelAsync`
+
+**`BuildInParallelAsync`:**
+- Shares one `NlProfileBuilderService` instance across all tasks
+- Launches `Task<BatchProfileResult>` per description via `BuildSingleSafeAsync`
+- `BuildSingleSafeAsync` wraps `NlProfileBuilderService.BuildAsync` in try/catch; returns `IsError=true` on any exception
+- Awaits `Task.WhenAll`, returns ordered list
+
+**`BuildWithAnthropicBatchAsync`:**
+
+Step 1 — Submit batch (`POST /v1/messages/batches`):
+- Headers: `x-api-key`, `anthropic-version: 2023-06-01`, `anthropic-beta: message-batches-2024-09-24`
+- Body:
+  ```json
+  {
+    "requests": [
+      {
+        "custom_id": "0",
+        "params": {
+          "model": "<from settings>",
+          "max_tokens": 2048,
+          "system": [{ "type": "text", "text": "<prompt>", "cache_control": { "type": "ephemeral" } }],
+          "messages": [{ "role": "user", "content": "<description>" }],
+          "tools": [{ "name": "build_query_profile", "description": "...", "input_schema": {...} }],
+          "tool_choice": { "type": "tool", "name": "build_query_profile" }
+        }
+      }
+    ]
+  }
+  ```
+- Parse `id` from response; throw if missing
+
+Step 2 — Poll until ended:
+- `GET /v1/messages/batches/{id}` in loop with `await Task.Delay(_pollIntervalMs)`
+- Break when `processing_status == "ended"`
+
+Step 3 — Fetch JSONL results:
+- `GET /v1/messages/batches/{id}/results`
+- Pass content string to `ParseBatchResults(descriptions, jsonlContent)`
+
+**`ParseBatchResults` (private static):**
+- Split JSONL on `\n`, skip blank/malformed lines
+- Parse `custom_id` as int index; parse `result.type`
+  - `"succeeded"`: walk `result.message.content[]`, find first `type=="tool_use"` block, serialize `input` → `ParseProfile`
+  - `"errored"`: `IsError=true`, message from `result.error.message`
+- Build ordered list indexed 0..N; any missing index → `IsError=true, ErrorMessage="No result returned."`
+
+**Private static helpers (duplicated from `NlProfileBuilderService` — acceptable, keeps services decoupled):**
+- `ParseProfile(string argumentsJson)` → `QueryProfileResult`
+- `ReadStringList(JObject root, string key)` → `List<string>`
+- `GetToolSchema()` → same JSON string literal
+
+---
+
+### 3. `JobSearchBuilder.Tests/BatchProfileBuilderServiceTests.cs`
+
+Uses `[TestFixture]`, `[SetUp]`, `[TearDown]` — same temp-dir pattern as `NlProfileBuilderServiceTests`.
+
+**SetUp:**
+- Create temp prompt dir with `nl_profile_builder/v2.xml` stub
+- `InMemoryLlmProvider` with valid `build_query_profile` tool-call response
+- `AppSettings` with Anthropic config: api key `"test-key"`, model `"claude-sonnet-4-5-20250929"`
+
+**Parallel-path tests (ProviderName == "InMemory" ≠ "Anthropic"):**
+
+| Test | Scenario | Assert |
 |---|---|---|
-| Anthropic | claude-sonnet-4-5-20250929 | **80%** (16/20) |
-| OpenAI | gpt-4.1-mini | **55%** (11/20) |
-| Overall | | 67.5% (27/40) |
+| `BuildBatchAsync_NullDescriptions_ThrowsArgumentNullException` | null | `ThrowsAsync<ArgumentNullException>` |
+| `BuildBatchAsync_EmptyList_ReturnsEmptyList` | `[]` | `Count == 0` |
+| `BuildBatchAsync_TwoDescriptions_ReturnsTwoResults` | 2 descriptions | `Count == 2`, neither `IsError` |
+| `BuildBatchAsync_ValidResponse_ParsesProfileCorrectly` | 1 description | `Role=="Developer"`, `Seniority=="Senior"`, `TechStack==["C#",".NET"]` |
+| `BuildBatchAsync_ProviderReturnsWrongTool_WrapsErrorInResult` | `NextResponse` has no `ToolCallName` | `results[0].IsError==true`, `ErrorMessage` not empty |
 
-Full findings in `prompts/nl_profile_builder/CHANGELOG.md`.
+**Anthropic-path tests — inner class `FakeBatchHandler : HttpMessageHandler`:**
 
----
+Handler logic (decides response by HTTP method + URL):
+- `POST` → capture `LastBatchRequestBody`, return `{"id":"msgbatch_test","processing_status":"in_progress"}`
+- `GET` not ending in `/results` → return `{"processing_status":"ended"}`
+- `GET` ending in `/results` → return the JSONL string supplied at construction
 
-## What Needs To Be Done Next (in order)
+Use `AnthropicProvider(settings, new FakeNeverCalledHandler())` as `ILlmProvider` so `ProviderName=="Anthropic"` triggers the batch code path. `FakeNeverCalledHandler` throws `InvalidOperationException` if `SendAsync` is ever called (it shouldn't be in the batch path).
 
-### TASK 1 — Fix `nl_profile_builder/v1.xml` (two prompt bugs found by the eval)
+All Anthropic tests pass `pollIntervalMs: 0` to avoid real delay.
 
-**Bug 1 — Engineering manager seniority**
-Both models return `seniority: "Manager"` instead of `"Any"`.
-Fix: add a constraint to `v1.xml` clarifying that management titles (Engineering Manager, Director, VP) are roles, not seniority levels. Seniority should stay `"Any"` unless Junior/Mid/Senior/Lead/Principal/Staff is explicitly stated.
-
-**Bug 2 — Inferring remote from a negative exclusion**
-Both models add `remote_terms: ["remote"]` when the user says "no on-site" — but the user didn't say remote, they just excluded on-site.
-Fix: add a constraint stating do not populate `remote_terms` based on an exclusion alone. Only populate it when the user explicitly states a preference (remote, hybrid, fully remote, etc.).
-
-**Process:**
-1. Copy `v1.xml` → `v2.xml` in `prompts/nl_profile_builder/`
-2. Apply both constraint fixes in `v2.xml`
-3. Update `prompts/nl_profile_builder/messages.yaml` — change `v1.xml` reference to `v2.xml`
-4. Run `promptfoo eval` from `prompts/` and compare score vs baseline (80% / 55%)
-5. If v2 scores higher on both providers → record new scores in `CHANGELOG.md`, keep v2 as active
-6. If not → investigate failing cases and iterate
-
-### TASK 2 — Add remaining humanitarian/international org domains to `appsettings.json`
-
-International org sets #14, #15, #16 already exist:
-- Set #14: AfDB, World Bank, UNDP, UNOPS
-- Set #15: UNICEF, WFP, ITU, WIPO
-- Set #16: WHO, IMF, IOM, UN, IDB Invest
-
-User has a list of additional organisations to paste. Add them into existing sets or create Set #17+ as needed. Each entry is just a domain string under the matching `"Domains"` array.
-
-### TASK 3 — Add humanitarian test cases to the golden sets
-
-Once the org list is finalised, add humanitarian-flavoured test cases:
-- `nl_profile_builder` golden set: e.g. "Programme Officer, WASH sector, East Africa, no relocation" or "M&E Specialist, UN agencies, remote, UTC+2 or UTC+3"
-- `query_review` golden set: queries using humanitarian site: filters (site:careers.un.org, site:jobs.unicef.org etc.) to validate the reviewer handles them correctly
-- `query_suggestions` golden set: Role category cases with humanitarian titles (M&E Officer, Field Coordinator, Programme Manager)
-
-Then re-run all three evals and record the new baseline.
-
-### TASK 4 — Merge Phase 6 PR and mark done
-
-Once Tasks 1–3 are complete:
-1. Open PR from `feature/eval-pipeline` → `master`
-2. Update `CLAUDE.md` progress tracker: change Phase 6 from `[ ]` to `[x]`
-
-### TASK 5 — Start Phase 7 — Batch Profile Generation (`feature/batch-profiles`)
-
-New branch: `feature/batch-profiles`
-
-- A `Bulk Describe` dialog accepts multiple plain English descriptions (one per line)
-- `BatchProfileBuilderService` checks active provider:
-  - Anthropic → `/v1/messages/batches` (one HTTP call, poll until `processing_status === "ended"`)
-  - OpenAI / Gemini → `Task.WhenAll` for parallel async calls
-- Results shown in a list with `Apply to Profile` and `Save as New Profile` buttons per result
+| Test | Scenario | Assert |
+|---|---|---|
+| `BuildBatchAsync_AnthropicProvider_PostsBatchWithCorrectRequestCount` | 2 descriptions | body contains `"custom_id":"0"` and `"custom_id":"1"` |
+| `BuildBatchAsync_AnthropicProvider_IncludesCorrectModel` | 1 description | body contains `"claude-sonnet-4-5-20250929"` |
+| `BuildBatchAsync_AnthropicProvider_ForcesBuildQueryProfileTool` | 1 description | body contains `"build_query_profile"` and `"type":"tool"` |
+| `BuildBatchAsync_AnthropicProvider_ParsesSucceededJsonlResult` | JSONL with succeeded entry | `IsError==false`, `Profile.Role=="Engineer"` |
+| `BuildBatchAsync_AnthropicProvider_ParsesErroredJsonlResult` | JSONL with errored entry | `IsError==true`, `ErrorMessage` contains error text |
+| `BuildBatchAsync_AnthropicProvider_HandlesGapInResults` | JSONL missing index 1 (2 descriptions submitted) | `results[1].IsError==true` |
 
 ---
 
-## How to Run the Eval
+## Files to Modify
 
-```powershell
-# Set API keys first (if not already in system environment)
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
-$env:OPENAI_API_KEY = "sk-..."
+### 4. `JobSearchBuilder/JobSearchBuilder.csproj`
 
-# From the prompts/ directory:
-cd prompts
+Add two `<Compile>` entries inside the existing `<ItemGroup>` that lists source files (after `Models\QueryReviewResult.cs` and `Services\NlProfileBuilderService.cs`):
 
-promptfoo eval                                         # nl_profile_builder (20 cases x 2 providers)
-promptfoo eval --config query_review/eval.yaml         # query_review (17 cases x 2 providers)
-promptfoo eval --config query_suggestions/eval.yaml    # query_suggestions (20 cases x 2 providers)
+```xml
+<Compile Include="Models\BatchProfileResult.cs" />
+<Compile Include="Services\BatchProfileBuilderService.cs" />
 ```
 
 ---
 
-## Key Files Reference
+### 5. `JobSearchBuilder/MainForm.cs`
 
-| File | Purpose |
-|---|---|
-| `prompts/promptfooconfig.yaml` | Master eval entry point (runs nl_profile_builder) |
-| `prompts/nl_profile_builder/v1.xml` | Active system prompt — needs v2 with two bug fixes |
-| `prompts/nl_profile_builder/CHANGELOG.md` | Baseline scores + failure analysis |
-| `prompts/nl_profile_builder/messages.yaml` | Promptfoo message structure (update to v2.xml after fix) |
-| `prompts/evals/nl_profile_builder/golden_set.json` | 20 test cases |
-| `prompts/query_review/eval.yaml` | Eval config for query_review |
-| `prompts/query_suggestions/eval.yaml` | Eval config for query_suggestions |
-| `JobSearchBuilder/appsettings.json` | ATS + humanitarian source groups (sets #14–16 exist) |
-| `CLAUDE.md` | Phase tracker — Phase 6 is `[ ]` pending completion |
+**In `PostInitialize()`** — add one call directly after `AddDescribeRoleButton()`:
+```csharp
+AddBulkDescribeButton();
+```
+
+**`AddBulkDescribeButton()` private method:**
+- Same visual style as `AddDescribeRoleButton` (purple BackColor, white bold text, FlatStyle.Flat)
+- `Text = "Bulk Describe"`, `Size = (126, 28)`, `Anchor = Top | Right`
+- `Location = new Point(btnSaveProfile.Left - 266, btnSaveProfile.Top)`
+  - Calculation: 132 (space for Describe Role) + 126 (Bulk Describe width) + 8 (gap) = 266
+- Add to `pnlEditor.Controls`, bring to front
+- Wire `Click += btnBulkDescribe_Click`
+
+**`btnBulkDescribe_Click` — `async void`:**
+```
+1. Guard: if _provider == null → MessageBox warning, return
+2. string raw = ShowBulkDescribeInputDialog()
+3. If null or whitespace → return
+4. Split raw on '\n', trim each, filter blank → List<string> descriptions
+5. If descriptions.Count == 0 → return
+6. Disable button, set Cursor.Current = Cursors.WaitCursor
+7. try:
+     var service = new BatchProfileBuilderService(_provider, _promptLoader, _config)
+     var results = await service.BuildBatchAsync(descriptions)
+     ShowBatchResultsDialog(results)
+   catch (Exception ex):
+     MessageBox error
+   finally:
+     restore cursor, re-enable button
+```
+
+**`ShowBulkDescribeInputDialog()` — `private static string`:**
+- Inline `Form` in `using` block (same pattern as `ShowRoleDescriptionDialog`)
+- `ClientSize = (520, 340)`, FixedDialog, no maximize/minimize
+- Label: "Enter one role description per line:"
+- Multiline `TextBox`, size `(496, 252)`, vertical scroll bars
+- "Build Profiles" OK button + "Cancel" button
+- Returns `txtDescriptions.Text` or `null` on cancel/empty
+
+**`ShowBatchResultsDialog(List<BatchProfileResult> results)` — `private void`:**
+- Inline `Form` in `using`, `Size = (700, 560)`, `Sizable`, `MinimumSize = (560, 340)`
+- `Text = "Bulk Build Results — " + results.Count + " description(s)"`
+
+Footer (Dock=Bottom, 44px, light grey):
+- Left: summary label `"{successCount} built, {errorCount} failed"`
+- Right: "Close" button (`DialogResult = Cancel`)
+
+Scroll area (Dock=Fill, AutoScroll=true, Padding=8):
+- Contains `FlowLayoutPanel` (TopDown, AutoSize, Width=656)
+- Per result: `CreateBatchResultRow(result)` → appended to flow
+
+Show with `dialog.ShowDialog(this)`.
+
+**`CreateBatchResultRow(BatchProfileResult result)` — `private Panel`:**
+- `Width = 652`, `Height = 88`, `Margin = Padding(0,0,0,4)`
+- `BackColor`: error → `FromArgb(255, 248, 248)`, success → `FromArgb(248, 250, 255)`
+- `Paint` event draws 1px border (light red for error, light blue-grey for success)
+
+Inside the row:
+
+*Description label* (top-left, italic 9pt, Width=472, truncated):
+```csharp
+string desc = result.Description.Length > 80 ? result.Description.Substring(0, 80) + "..." : result.Description;
+```
+
+*Profile / error label* (below description, 8.5pt, Width=472):
+- Success: `"{Seniority} {Role} · {string.Join(", ", TechStack.Take(3))}"` in blue
+- Error: `"Error: {ErrorMessage}"` in red
+
+*Action buttons* (right side, success only):
+- "Apply" button at `(498, 10)`, size `(70, 26)` — calls `ApplyQueryProfileResult(result.Profile, false)` (dialog stays open)
+- "Save New" button at `(498, 44)`, size `(78, 26)` — calls `ApplyQueryProfileResult(result.Profile, true)`
+- Both: FlatStyle, no border, white text; Apply=blue, Save=green
+
+---
+
+## Implementation Order
+
+1. ✅ `BatchProfileResult.cs`
+2. `BatchProfileBuilderService.cs`
+3. `JobSearchBuilder.csproj` — add 2 `<Compile>` entries
+4. `MainForm.cs` — button + click handler + 2 dialog methods + row helper
+5. `BatchProfileBuilderServiceTests.cs`
+6. `dotnet test JobSearchBuilder.Tests/JobSearchBuilder.Tests.csproj` — all pass
+
+---
+
+## Key Constraints (from CLAUDE.md)
+
+- No new interfaces — `BatchProfileBuilderService` checks `_provider.ProviderName` directly
+- .NET Framework 4.8 — no records, no file-scoped namespaces, no `ThrowIfNull`
+- `async void` for WinForms event handlers
+- `Newtonsoft.Json` for all JSON — not `System.Text.Json`
+- `InMemoryLlmProvider` for parallel-path tests; `FakeBatchHandler` for Anthropic-path tests
+- Prompt loaded via `PromptLoader.Load("nl_profile_builder", "v2")` — not hardcoded
+- No hardcoded model IDs in service code — always `_settings.Ai.GetModelId("Anthropic", "Balanced")`

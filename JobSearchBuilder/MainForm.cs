@@ -38,6 +38,7 @@ namespace JobSearchBuilder
         private bool _activeSuggIsExclude;
         private Panel _pnlReviewResult;
         private Button _btnReviewQuery;
+        private Button _btnBulkDescribe;
 
         public MainForm()
         {
@@ -163,6 +164,7 @@ namespace JobSearchBuilder
             WireAiSuggestions();
 
             AddDescribeRoleButton();
+            AddBulkDescribeButton();
 
             Panel pnlFooter = new Panel
             {
@@ -250,6 +252,28 @@ namespace JobSearchBuilder
             btnDescribeRole.Click += btnDescribeRole_Click;
             pnlEditor.Controls.Add(btnDescribeRole);
             btnDescribeRole.BringToFront();
+        }
+
+        private void AddBulkDescribeButton()
+        {
+            _btnBulkDescribe = new Button
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(80, 70, 180),
+                Cursor = Cursors.Hand,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.White,
+                Location = new Point(btnSaveProfile.Left - 266, btnSaveProfile.Top),
+                Name = "btnBulkDescribe",
+                Size = new Size(126, 28),
+                TabIndex = 3,
+                Text = "Bulk Describe",
+                UseVisualStyleBackColor = false
+            };
+            _btnBulkDescribe.Click += btnBulkDescribe_Click;
+            pnlEditor.Controls.Add(_btnBulkDescribe);
+            _btnBulkDescribe.BringToFront();
         }
 
         private void AddReviewQueryPanel()
@@ -762,6 +786,54 @@ namespace JobSearchBuilder
             }
         }
 
+        private async void btnBulkDescribe_Click(object sender, EventArgs e)
+        {
+            if (_provider == null)
+            {
+                MessageBox.Show("AI provider is unavailable. Check your provider settings and API key.", "Bulk Describe",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string raw = ShowBulkDescribeInputDialog();
+            if (string.IsNullOrWhiteSpace(raw))
+                return;
+
+            List<string> descriptions = raw
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(d => d.Trim())
+                .Where(d => !string.IsNullOrWhiteSpace(d))
+                .ToList();
+
+            if (descriptions.Count == 0)
+                return;
+
+            Button button = sender as Button;
+            if (button != null)
+                button.Enabled = false;
+
+            Cursor previousCursor = Cursor.Current;
+            Cursor.Current = Cursors.WaitCursor;
+
+            try
+            {
+                BatchProfileBuilderService service = new BatchProfileBuilderService(_provider, _promptLoader, _config);
+                List<BatchProfileResult> results = await service.BuildBatchAsync(descriptions);
+                ShowBatchResultsDialog(results);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not build profiles from those descriptions.\r\n\r\n" + ex.Message,
+                    "Bulk Describe", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Cursor.Current = previousCursor;
+                if (button != null && !button.IsDisposed)
+                    button.Enabled = true;
+            }
+        }
+
         private async void btnReviewQuery_Click(object sender, EventArgs e)
         {
             if (_provider == null)
@@ -1199,6 +1271,213 @@ namespace JobSearchBuilder
                     return;
                 }
             }
+        }
+
+        private static string ShowBulkDescribeInputDialog()
+        {
+            using (Form dialog = new Form())
+            using (Label lblPrompt = new Label())
+            using (TextBox txtDescriptions = new TextBox())
+            using (Button btnOk = new Button())
+            using (Button btnCancel = new Button())
+            {
+                dialog.Text = "Bulk Describe";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.ClientSize = new Size(520, 340);
+
+                lblPrompt.Text = "Enter one role description per line:";
+                lblPrompt.AutoSize = true;
+                lblPrompt.Font = new Font("Segoe UI", 9f);
+                lblPrompt.Location = new Point(12, 12);
+
+                txtDescriptions.Multiline = true;
+                txtDescriptions.ScrollBars = ScrollBars.Vertical;
+                txtDescriptions.Font = new Font("Segoe UI", 10f);
+                txtDescriptions.Location = new Point(12, 36);
+                txtDescriptions.Size = new Size(496, 252);
+                txtDescriptions.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+
+                btnOk.Text = "Build Profiles";
+                btnOk.DialogResult = DialogResult.OK;
+                btnOk.Size = new Size(112, 28);
+                btnOk.Location = new Point(282, 304);
+                btnOk.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
+
+                btnCancel.Text = "Cancel";
+                btnCancel.DialogResult = DialogResult.Cancel;
+                btnCancel.Size = new Size(90, 28);
+                btnCancel.Location = new Point(402, 304);
+                btnCancel.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
+
+                dialog.Controls.Add(lblPrompt);
+                dialog.Controls.Add(txtDescriptions);
+                dialog.Controls.Add(btnOk);
+                dialog.Controls.Add(btnCancel);
+                dialog.AcceptButton = btnOk;
+                dialog.CancelButton = btnCancel;
+
+                if (dialog.ShowDialog() != DialogResult.OK)
+                    return null;
+
+                string value = txtDescriptions.Text.Trim();
+                return string.IsNullOrWhiteSpace(value) ? null : value;
+            }
+        }
+
+        private void ShowBatchResultsDialog(List<BatchProfileResult> results)
+        {
+            List<BatchProfileResult> batchResults = results ?? new List<BatchProfileResult>();
+            using (Form dialog = new Form())
+            using (Panel footer = new Panel())
+            using (Label lblSummary = new Label())
+            using (Button btnClose = new Button())
+            using (Panel scrollArea = new Panel())
+            using (FlowLayoutPanel rows = new FlowLayoutPanel())
+            {
+                int successCount = batchResults.Count(r => !r.IsError);
+                int errorCount = batchResults.Count - successCount;
+
+                dialog.Text = "Bulk Build Results - " + batchResults.Count + " description(s)";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.Size = new Size(700, 560);
+                dialog.MinimumSize = new Size(560, 340);
+                dialog.FormBorderStyle = FormBorderStyle.Sizable;
+
+                footer.Dock = DockStyle.Bottom;
+                footer.Height = 44;
+                footer.BackColor = Color.FromArgb(240, 242, 248);
+                footer.Padding = new Padding(12, 0, 12, 0);
+
+                lblSummary.Text = successCount + " built, " + errorCount + " failed";
+                lblSummary.AutoSize = true;
+                lblSummary.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
+                lblSummary.ForeColor = Color.FromArgb(90, 90, 110);
+                lblSummary.Location = new Point(12, 14);
+
+                btnClose.Text = "Close";
+                btnClose.DialogResult = DialogResult.Cancel;
+                btnClose.Size = new Size(90, 28);
+                btnClose.Anchor = AnchorStyles.Right | AnchorStyles.Top;
+                btnClose.Location = new Point(footer.Width - 102, 8);
+                btnClose.Left = dialog.ClientSize.Width - btnClose.Width - 24;
+
+                footer.Resize += (s, e) =>
+                {
+                    btnClose.Left = footer.ClientSize.Width - btnClose.Width - 12;
+                };
+
+                scrollArea.Dock = DockStyle.Fill;
+                scrollArea.AutoScroll = true;
+                scrollArea.Padding = new Padding(8);
+                scrollArea.BackColor = Color.White;
+
+                rows.FlowDirection = FlowDirection.TopDown;
+                rows.WrapContents = false;
+                rows.AutoSize = true;
+                rows.Width = 656;
+                rows.Location = new Point(8, 8);
+
+                foreach (BatchProfileResult result in batchResults)
+                    rows.Controls.Add(CreateBatchResultRow(result));
+
+                footer.Controls.Add(lblSummary);
+                footer.Controls.Add(btnClose);
+                scrollArea.Controls.Add(rows);
+                dialog.Controls.Add(scrollArea);
+                dialog.Controls.Add(footer);
+                dialog.CancelButton = btnClose;
+
+                dialog.ShowDialog(this);
+            }
+        }
+
+        private Panel CreateBatchResultRow(BatchProfileResult result)
+        {
+            BatchProfileResult rowResult = result ?? new BatchProfileResult { IsError = true, ErrorMessage = "No result returned." };
+            Panel row = new Panel
+            {
+                Width = 652,
+                Height = 88,
+                Margin = new Padding(0, 0, 0, 4),
+                BackColor = rowResult.IsError ? Color.FromArgb(255, 248, 248) : Color.FromArgb(248, 250, 255)
+            };
+
+            row.Paint += (s, e) =>
+            {
+                Color border = rowResult.IsError ? Color.FromArgb(245, 190, 190) : Color.FromArgb(205, 214, 230);
+                using (Pen pen = new Pen(border))
+                    e.Graphics.DrawRectangle(pen, 0, 0, row.Width - 1, row.Height - 1);
+            };
+
+            string description = rowResult.Description ?? string.Empty;
+            string desc = description.Length > 80 ? description.Substring(0, 80) + "..." : description;
+            Label lblDescription = new Label
+            {
+                Text = desc,
+                AutoSize = false,
+                Width = 472,
+                Height = 22,
+                Location = new Point(12, 10),
+                Font = new Font("Segoe UI", 9f, FontStyle.Italic),
+                ForeColor = Color.FromArgb(80, 80, 100),
+                AutoEllipsis = true
+            };
+
+            Label lblProfile = new Label
+            {
+                AutoSize = false,
+                Width = 472,
+                Height = 42,
+                Location = new Point(12, 36),
+                Font = new Font("Segoe UI", 8.5f),
+                AutoEllipsis = true
+            };
+
+            if (rowResult.IsError)
+            {
+                lblProfile.Text = "Error: " + rowResult.ErrorMessage;
+                lblProfile.ForeColor = Color.FromArgb(175, 45, 45);
+            }
+            else
+            {
+                QueryProfileResult profile = rowResult.Profile ?? new QueryProfileResult();
+                lblProfile.Text = (profile.Seniority + " " + profile.Role + " - " + string.Join(", ", profile.TechStack.Take(3))).Trim();
+                lblProfile.ForeColor = Color.FromArgb(45, 80, 150);
+
+                Button btnApply = CreateBatchActionButton("Apply", Color.FromArgb(65, 105, 190), new Point(498, 10), new Size(70, 26));
+                btnApply.Click += (s, e) => ApplyQueryProfileResult(profile, false);
+
+                Button btnSaveNew = CreateBatchActionButton("Save New", Color.FromArgb(55, 145, 90), new Point(498, 44), new Size(78, 26));
+                btnSaveNew.Click += (s, e) => ApplyQueryProfileResult(profile, true);
+
+                row.Controls.Add(btnApply);
+                row.Controls.Add(btnSaveNew);
+            }
+
+            row.Controls.Add(lblDescription);
+            row.Controls.Add(lblProfile);
+            return row;
+        }
+
+        private static Button CreateBatchActionButton(string text, Color backColor, Point location, Size size)
+        {
+            Button button = new Button
+            {
+                Text = text,
+                BackColor = backColor,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                Location = location,
+                Size = size,
+                Cursor = Cursors.Hand,
+                UseVisualStyleBackColor = false
+            };
+            button.FlatAppearance.BorderSize = 0;
+            return button;
         }
 
         private static DescribeRoleDialogResult ShowRoleDescriptionDialog()
