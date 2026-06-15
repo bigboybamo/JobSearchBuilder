@@ -1,5 +1,21 @@
 # nl_profile_builder Prompt Changelog
 
+## v3 — Location and visa extraction (2026-06-15)
+
+**Changes from v2:**
+1. Added two new tool fields, `locations` and `visa_terms`, to the `build_query_profile` schema (and to `QueryProfileResult`). Previously the Describe Role workflow never extracted these, so the location and visa chips kept whatever defaults were already loaded in the UI regardless of the typed description.
+2. Added `<context>` definitions for locations and visa terms.
+3. Added constraints:
+   - `locations` only when the user explicitly names a geographic place; empty otherwise. Do not infer from timezone, remote preference, or nationality.
+   - `visa_terms` only when the user wants to *match* a work-authorization phrase. A visa requirement stated as something to *avoid* ("no visa sponsorship") goes to `exclude_terms`, mirroring the existing remote/exclusion rule.
+4. `ApplyQueryProfileResult` now fully drives `LocationFilters`/`VisaFilters` from the result (cleared when unmentioned), matching how role/stack/remote/timezone/exclude already behave.
+
+**Eval results vs v2 baseline:** PENDING — run `promptfoo eval` from `/prompts/` against Anthropic and OpenAI before merging, then record scores here. Golden set updated with location/visa cases.
+
+**v3 is the active prompt once evals confirm no regression on the v2 cases.**
+
+---
+
 ## v2 — Seniority and remote_terms constraint fixes (2026-06-05)
 
 **Changes from v1:**

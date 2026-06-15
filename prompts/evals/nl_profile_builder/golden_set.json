@@ -118,5 +118,29 @@
     "vars": { "description": "Senior machine learning engineer, PyTorch and TensorFlow, no PhD required" },
     "expected": { "role": "Machine Learning Engineer", "seniority": "Senior", "tech_stack": ["PyTorch", "TensorFlow"], "remote_terms": [], "timezone_terms": [], "exclude_terms": ["PhD required"] },
     "assert": [{ "type": "llm-rubric", "value": "role is 'Machine Learning Engineer' or 'ML Engineer', seniority is 'Senior', tech_stack contains 'PyTorch' and 'TensorFlow', exclude_terms contains a PhD-related exclusion. remote_terms and timezone_terms are empty." }]
+  },
+  {
+    "description": "Backend developer — explicit location extraction",
+    "vars": { "description": "Backend developer in Berlin, Java and Spring, hybrid" },
+    "expected": { "role": "Backend Developer", "seniority": "Any", "tech_stack": ["Java", "Spring"], "locations": ["Berlin"], "visa_terms": [], "remote_terms": ["hybrid"], "timezone_terms": [], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Backend Developer', seniority is 'Any', tech_stack contains 'Java' and 'Spring', locations contains 'Berlin', remote_terms contains 'hybrid'. visa_terms, timezone_terms, and exclude_terms are empty." }]
+  },
+  {
+    "description": "Frontend developer — visa sponsorship wanted (match)",
+    "vars": { "description": "Frontend developer, React, must offer visa sponsorship" },
+    "expected": { "role": "Frontend Developer", "seniority": "Any", "tech_stack": ["React"], "locations": [], "visa_terms": ["visa sponsorship"], "remote_terms": [], "timezone_terms": [], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Frontend Developer', seniority is 'Any', tech_stack contains 'React', visa_terms contains a visa-sponsorship term. locations, remote_terms, timezone_terms, and exclude_terms are empty." }]
+  },
+  {
+    "description": "Cloud engineer — no sponsorship is an exclusion, not a visa match",
+    "vars": { "description": "Cloud engineer, AWS, no visa sponsorship available" },
+    "expected": { "role": "Cloud Engineer", "seniority": "Any", "tech_stack": ["AWS"], "locations": [], "visa_terms": [], "remote_terms": [], "timezone_terms": [], "exclude_terms": ["visa sponsorship"] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Cloud Engineer', seniority is 'Any', tech_stack contains 'AWS', exclude_terms contains a visa-sponsorship exclusion. visa_terms must be EMPTY — a 'no sponsorship' statement is an exclusion, not a visa match. locations, remote_terms, and timezone_terms are empty." }]
+  },
+  {
+    "description": "Remote developer — location must not be inferred from timezone",
+    "vars": { "description": "Software developer, fully remote, UTC+1" },
+    "expected": { "role": "Software Developer", "seniority": "Any", "tech_stack": [], "locations": [], "visa_terms": [], "remote_terms": ["fully remote"], "timezone_terms": ["UTC+1"], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Software Developer', seniority is 'Any', remote_terms contains 'fully remote', timezone_terms contains 'UTC+1'. locations MUST be empty — a timezone is not a location. visa_terms, tech_stack, and exclude_terms are empty." }]
   }
 ]

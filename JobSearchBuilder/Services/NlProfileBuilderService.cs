@@ -30,7 +30,7 @@ namespace JobSearchBuilder.Services
 
             LlmRequest request = new LlmRequest
             {
-                SystemPrompt = _promptLoader.Load("nl_profile_builder", "v2"),
+                SystemPrompt = _promptLoader.Load("nl_profile_builder", "v3"),
                 UserMessage = description.Trim(),
                 ForceToolName = ToolName,
                 ModelTier = "Balanced",
@@ -67,6 +67,8 @@ namespace JobSearchBuilder.Services
                 Role = ReadString(root, "role", "Role"),
                 Seniority = ReadString(root, "seniority", "Seniority"),
                 TechStack = ReadStringList(root, "tech_stack", "TechStack"),
+                Locations = ReadStringList(root, "locations", "Locations"),
+                VisaTerms = ReadStringList(root, "visa_terms", "VisaTerms"),
                 RemoteTerms = ReadStringList(root, "remote_terms", "RemoteTerms"),
                 TimezoneTerms = ReadStringList(root, "timezone_terms", "TimezoneTerms"),
                 ExcludeTerms = ReadStringList(root, "exclude_terms", "ExcludeTerms")
@@ -105,11 +107,13 @@ namespace JobSearchBuilder.Services
     ""role"": { ""type"": ""string"" },
     ""seniority"": { ""type"": ""string"" },
     ""tech_stack"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
+    ""locations"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
+    ""visa_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
     ""remote_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
     ""timezone_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
     ""exclude_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } }
   },
-  ""required"": [""role"", ""seniority"", ""tech_stack"", ""remote_terms"", ""timezone_terms"", ""exclude_terms""],
+  ""required"": [""role"", ""seniority"", ""tech_stack"", ""locations"", ""visa_terms"", ""remote_terms"", ""timezone_terms"", ""exclude_terms""],
   ""additionalProperties"": false
 }";
         }
