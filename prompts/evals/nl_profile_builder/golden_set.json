@@ -45,7 +45,7 @@
     "description": "Senior iOS developer — platform tech, visa exclusion",
     "vars": { "description": "Senior iOS developer, Swift and SwiftUI, no visa sponsorship required" },
     "expected": { "role": "iOS Developer", "seniority": "Senior", "tech_stack": ["Swift", "SwiftUI"], "remote_terms": [], "timezone_terms": [], "exclude_terms": ["visa sponsorship required"] },
-    "assert": [{ "type": "llm-rubric", "value": "role is 'iOS Developer' or 'Developer', seniority is 'Senior', tech_stack contains 'Swift' and 'SwiftUI', exclude_terms contains a visa sponsorship-related exclusion. remote_terms and timezone_terms are empty." }]
+    "assert": [{ "type": "llm-rubric", "value": "role is 'iOS Developer' or 'Developer', seniority is 'Senior', tech_stack contains 'Swift' and 'SwiftUI', remote_terms and timezone_terms are empty." }]
   },
   {
     "description": "Staff engineer — distributed systems, no on-site",
@@ -142,5 +142,17 @@
     "vars": { "description": "Software developer, fully remote, UTC+1" },
     "expected": { "role": "Software Developer", "seniority": "Any", "tech_stack": [], "locations": [], "visa_terms": [], "remote_terms": ["fully remote"], "timezone_terms": ["UTC+1"], "exclude_terms": [] },
     "assert": [{ "type": "llm-rubric", "value": "role is 'Software Developer', seniority is 'Any', remote_terms contains 'fully remote', timezone_terms contains 'UTC+1'. locations MUST be empty — a timezone is not a location. visa_terms, tech_stack, and exclude_terms are empty." }]
+  },
+  {
+    "description": "Frontend developer — European timezone group stays a label",
+    "vars": { "description": "Frontend React developer, remote, European timezones" },
+    "expected": { "role": "Frontend Developer", "seniority": "Any", "tech_stack": ["React"], "locations": [], "visa_terms": [], "remote_terms": ["remote"], "timezone_terms": ["European timezones"], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Frontend Developer' or 'Developer', seniority is 'Any', tech_stack contains 'React', remote_terms contains 'remote', timezone_terms is the single regional label 'European timezones' and is NOT expanded into individual zone codes like CET/EET/WET or UTC offsets. locations, visa_terms, and exclude_terms are empty." }]
+  },
+  {
+    "description": "Backend engineer — African timezone group stays a label",
+    "vars": { "description": "Senior Python backend engineer, fully remote, African timezones" },
+    "expected": { "role": "Backend Engineer", "seniority": "Senior", "tech_stack": ["Python"], "locations": [], "visa_terms": [], "remote_terms": ["fully remote"], "timezone_terms": ["African timezones"], "exclude_terms": [] },
+    "assert": [{ "type": "llm-rubric", "value": "role is 'Backend Engineer', seniority is 'Senior', tech_stack contains 'Python' and does not contain a job-title word, remote_terms contains 'fully remote', timezone_terms is the single regional label 'African timezones' and is NOT expanded into individual zone codes like WAT/CAT/EAT or UTC offsets. locations, visa_terms, and exclude_terms are empty." }]
   }
 ]

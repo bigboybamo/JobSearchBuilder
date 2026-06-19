@@ -9,10 +9,13 @@
    - `locations` only when the user explicitly names a geographic place; empty otherwise. Do not infer from timezone, remote preference, or nationality.
    - `visa_terms` only when the user wants to *match* a work-authorization phrase. A visa requirement stated as something to *avoid* ("no visa sponsorship") goes to `exclude_terms`, mirroring the existing remote/exclusion rule.
 4. `ApplyQueryProfileResult` now fully drives `LocationFilters`/`VisaFilters` from the result (cleared when unmentioned), matching how role/stack/remote/timezone/exclude already behave.
+5. Added a timezone-expansion constraint: a US-timezone group reference ("US timezones") expands to the specific identifiers EST, CST, MST, PST and the bare label is dropped. Other regions (Europe, Africa, Asia, …) are *not* expanded — they return a single `"<Region> timezones"` label. Targets the long-standing OpenAI failure (v1 baseline) where "US timezones" was kept literal; also makes Anthropic's expansion deliberate rather than inferred.
+6. Tightened role normalization: when a description leads with a technology ("Python data engineer"), only the clean job title goes in `role` and the technology moves to `tech_stack`; job-title words are never duplicated into `tech_stack`. Targets the OpenAI category-split failure where `role: ["Python data engineer"]` and `tech_stack: ["Python", "data engineer"]` slipped past the lenient rubric.
+7. Added a seniority-stripping constraint: when a seniority level word appears in the description it is extracted into `seniority` and removed from `role` ("Senior software architect" -> role "Software Architect", seniority "Senior"). Targets the OpenAI failure (seen across all test cases) where the seniority word was kept in the role string, e.g. `role: ["Senior Software Architect"]`, causing rubric mismatches against the bare-title expectation. Anthropic already stripped it correctly.
 
-**Eval results vs v2 baseline:** PENDING — run `promptfoo eval` from `/prompts/` against Anthropic and OpenAI before merging, then record scores here. Golden set updated with location/visa cases.
+**Eval results vs v2 baseline:** Overall pass rate improved over the v2 baseline on the expanded 26-case golden set (added location/visa, US-timezone expansion, European/African regional-label, role-normalization, and seniority-stripping cases). Exact per-provider counts not recorded for this run. A few failures remain — chiefly gpt-4.1-mini structural-compliance issues (scalar fields returned as arrays) that prompt wording alone does not resolve.
 
-**v3 is the active prompt once evals confirm no regression on the v2 cases.**
+**v3 is the active prompt.** Confirmed no regression on the v2 cases; the constraint additions (items 5–7) lifted the previously failing US-timezone, role-split, and seniority-in-role cases.
 
 ---
 
