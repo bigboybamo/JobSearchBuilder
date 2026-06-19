@@ -19,7 +19,7 @@ namespace JobSearchBuilder.Tests
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "JobSearchBuilderTests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(_tempRoot, "nl_profile_builder"));
-            File.WriteAllText(Path.Combine(_tempRoot, "nl_profile_builder", "v2.xml"), "<prompt><instructions>test prompt</instructions></prompt>");
+            File.WriteAllText(Path.Combine(_tempRoot, "nl_profile_builder", "v3.xml"), "<prompt><instructions>test prompt</instructions></prompt>");
 
             _provider = new InMemoryLlmProvider();
             _provider.NextResponse = new LlmResponse
@@ -29,6 +29,8 @@ namespace JobSearchBuilder.Tests
   ""role"": ""Developer"",
   ""seniority"": ""Senior"",
   ""tech_stack"": [""C#"", "".NET""],
+  ""locations"": [""Berlin"", ""Remote EU""],
+  ""visa_terms"": [""visa sponsorship""],
   ""remote_terms"": [""Fully Remote""],
   ""timezone_terms"": [""UTC+1""],
   ""exclude_terms"": [""security clearance""]
@@ -59,6 +61,8 @@ namespace JobSearchBuilder.Tests
             Assert.That(_provider.LastRequest.Tools.Count, Is.EqualTo(1));
             Assert.That(_provider.LastRequest.Tools[0].Name, Is.EqualTo("build_query_profile"));
             Assert.That(_provider.LastRequest.Tools[0].InputSchema, Does.Contain("tech_stack"));
+            Assert.That(_provider.LastRequest.Tools[0].InputSchema, Does.Contain("locations"));
+            Assert.That(_provider.LastRequest.Tools[0].InputSchema, Does.Contain("visa_terms"));
         }
 
         [Test]
@@ -69,6 +73,8 @@ namespace JobSearchBuilder.Tests
             Assert.That(result.Role, Is.EqualTo("Developer"));
             Assert.That(result.Seniority, Is.EqualTo("Senior"));
             Assert.That(result.TechStack, Is.EqualTo(new[] { "C#", ".NET" }));
+            Assert.That(result.Locations, Is.EqualTo(new[] { "Berlin", "Remote EU" }));
+            Assert.That(result.VisaTerms, Is.EqualTo(new[] { "visa sponsorship" }));
             Assert.That(result.RemoteTerms, Is.EqualTo(new[] { "Fully Remote" }));
             Assert.That(result.TimezoneTerms, Is.EqualTo(new[] { "UTC+1" }));
             Assert.That(result.ExcludeTerms, Is.EqualTo(new[] { "security clearance" }));

@@ -28,7 +28,7 @@ namespace JobSearchBuilder.Tests
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "JobSearchBuilderTests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(_tempRoot, "nl_profile_builder"));
-            File.WriteAllText(Path.Combine(_tempRoot, "nl_profile_builder", "v2.xml"), "<prompt><instructions>test prompt</instructions></prompt>");
+            File.WriteAllText(Path.Combine(_tempRoot, "nl_profile_builder", "v3.xml"), "<prompt><instructions>test prompt</instructions></prompt>");
 
             _provider = new InMemoryLlmProvider();
             _provider.NextResponse = CreateValidLlmResponse("Developer");

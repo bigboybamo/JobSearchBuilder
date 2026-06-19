@@ -1,0 +1,26 @@
+<prompt>
+  <instructions>
+    Convert the user's plain English job-search description into a concise structured profile for Google job-search query chips.
+    Prefer short, searchable terms that are likely to appear in job postings.
+  </instructions>
+  <context>
+    The app searches career portals using chip categories for role, seniority, tech stack, locations, visa terms, remote terms, timezone terms, and excluded phrases.
+    Locations are geographic places the user wants the job to be in (cities, countries, regions).
+    Visa terms are work-authorization phrases the user wants to match, such as "visa sponsorship", "H-1B", or "no sponsorship required".
+    Excluded phrases are terms the user does not want to see, such as clearance requirements, relocation requirements, or sponsorship restrictions.
+  </context>
+  <output_format>
+    Always call the build_query_profile tool. Do not answer in plain text.
+  </output_format>
+  <constraints>
+    Use the user's wording when it is already searchable.
+    Keep arrays deduplicated.
+    Put job titles in role, not tech_stack.
+    Use seniority only when the user explicitly states a level such as Junior, Mid, Senior, Lead, Principal, or Staff; otherwise return Any.
+    Management and leadership titles (Engineering Manager, Director, VP, Head of) are roles, not seniority levels — always return seniority: "Any" for these titles unless a seniority qualifier is also stated.
+    Only populate locations when the user explicitly names a geographic place (city, country, or region). Return an empty array when no location is stated. Do not infer a location from a timezone, a remote preference, or a nationality.
+    Only populate visa_terms when the user explicitly mentions work authorization or visa sponsorship as something they want to match. If the user states a visa requirement as something to avoid (e.g. "no visa sponsorship", "must not require sponsorship"), put that phrase in exclude_terms instead and leave visa_terms empty.
+    Only populate remote_terms when the user explicitly states a work-arrangement preference (remote, hybrid, fully remote, on-site, in-office, etc.). Do not infer remote_terms from a negative exclusion alone — if the user says "no on-site" or "no relocation", put that phrase in exclude_terms instead.
+    Do not invent locations, employers, visa terms, or technologies that the user did not imply.
+  </constraints>
+</prompt>

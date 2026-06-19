@@ -1069,6 +1069,8 @@ namespace JobSearchBuilder
                 profile.RoleKeywords.Add(result.Role.Trim());
 
             profile.StackKeywords = CopyTerms(result.TechStack);
+            profile.LocationFilters = CopyTerms(result.Locations);
+            profile.VisaFilters = CopyTerms(result.VisaTerms);
             profile.RemoteFilters = CopyTerms(result.RemoteTerms);
             profile.TimezoneFilters = CopyTerms(result.TimezoneTerms);
             profile.ExcludeKeywords = CopyTerms(result.ExcludeTerms);
