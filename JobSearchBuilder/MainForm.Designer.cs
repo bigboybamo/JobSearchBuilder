@@ -37,7 +37,7 @@
             this.btnDeleteProfile = new System.Windows.Forms.Button();
             this.lblProfilesHeader = new System.Windows.Forms.Label();
             this.pnlEditor = new System.Windows.Forms.Panel();
-            this.pnlScroll = new System.Windows.Forms.Panel();
+            this.pnlScroll = new JobSearchBuilder.NoScrollJumpPanel();
             this.flpEditor = new System.Windows.Forms.FlowLayoutPanel();
             this.lblAtsHeader = new System.Windows.Forms.Label();
             this.clbAtsGroups = new System.Windows.Forms.CheckedListBox();
@@ -750,7 +750,7 @@
         private System.Windows.Forms.Button btnSaveProfile;
 
         // Scrollable body
-        private System.Windows.Forms.Panel pnlScroll;
+        private JobSearchBuilder.NoScrollJumpPanel pnlScroll;
         private System.Windows.Forms.FlowLayoutPanel flpEditor;
 
         // ATS section
