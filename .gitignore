@@ -373,3 +373,7 @@ appsettings.local.json
 .claude/.setup-state
 .claude/project.env
 .claude/enabled-integrations
+
+# Generated eval output and scratch notes — not source (issue #29)
+prompts/results.html
+org_job.md

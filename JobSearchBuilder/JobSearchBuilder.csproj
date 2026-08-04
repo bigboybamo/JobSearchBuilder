@@ -241,6 +241,10 @@
       <Link>prompts\nl_profile_builder\v2.xml</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\prompts\nl_profile_builder\v3.xml">
+      <Link>prompts\nl_profile_builder\v3.xml</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="..\prompts\query_suggestions\v1.xml">
       <Link>prompts\query_suggestions\v1.xml</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
