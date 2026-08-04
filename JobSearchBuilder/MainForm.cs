@@ -1547,4 +1547,18 @@ namespace JobSearchBuilder
             public bool SaveAsNewProfile { get; set; }
         }
     }
+
+    /// <summary>
+    /// Panel that suppresses the AutoScroll "jump to focused control" behaviour.
+    /// Without this, clicking a checkbox inside the scrollable editor shifts the
+    /// content under the cursor and the wrong item gets toggled (issue #30).
+    /// Mouse-wheel and scrollbar scrolling are unaffected.
+    /// </summary>
+    public class NoScrollJumpPanel : Panel
+    {
+        protected override Point ScrollToControl(Control activeControl)
+        {
+            return DisplayRectangle.Location;
+        }
+    }
 }
