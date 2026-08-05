@@ -99,11 +99,25 @@ namespace JobSearchBuilder.Services
             Dictionary<string, string> dotEnv = LoadDotEnv();
             ai.ApiKeys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "Anthropic", GetDotEnvValue(dotEnv, "ANTHROPIC_API_KEY") },
-                { "OpenAI",    GetDotEnvValue(dotEnv, "OPENAI_API_KEY") },
-                { "Gemini",    GetDotEnvValue(dotEnv, "GEMINI_API_KEY") }
+                { "Anthropic", ResolveApiKey("ANTHROPIC_API_KEY", dotEnv) },
+                { "OpenAI",    ResolveApiKey("OPENAI_API_KEY", dotEnv) },
+                { "Gemini",    ResolveApiKey("GEMINI_API_KEY", dotEnv) }
             };
             return ai;
+        }
+
+        /// <summary>
+        /// Resolves an API key. Environment variables are the documented source of truth;
+        /// a gitignored <c>.env</c> file is a local-dev fallback used only when the
+        /// variable is unset. Extracted for unit testing.
+        /// </summary>
+        public static string ResolveApiKey(string envVarName, Dictionary<string, string> dotEnv)
+        {
+            string fromEnvironment = Environment.GetEnvironmentVariable(envVarName);
+            if (!string.IsNullOrWhiteSpace(fromEnvironment))
+                return fromEnvironment;
+
+            return GetDotEnvValue(dotEnv, envVarName);
         }
 
         private static Dictionary<string, string> LoadDotEnv()
@@ -148,6 +162,9 @@ namespace JobSearchBuilder.Services
 
         private static string GetDotEnvValue(Dictionary<string, string> dotEnv, string key)
         {
+            if (dotEnv == null)
+                return string.Empty;
+
             string value;
             return dotEnv.TryGetValue(key, out value) ? value : string.Empty;
         }
