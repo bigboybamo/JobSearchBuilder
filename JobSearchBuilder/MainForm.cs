@@ -859,7 +859,11 @@ namespace JobSearchBuilder
             catch (Exception ex)
             {
                 Debug.WriteLine("Query review failed: " + ex.Message);
-                ShowReviewResult(new QueryReviewResult());
+                ShowReviewResult(new QueryReviewResult
+                {
+                    Failed = true,
+                    ErrorMessage = ex.Message
+                });
             }
             finally
             {
@@ -874,12 +878,19 @@ namespace JobSearchBuilder
                 return;
 
             _pnlReviewResult.Controls.Clear();
-            QueryReviewResult review = result ?? new QueryReviewResult();
-            bool hasIssues = review.Issues.Count > 0;
-            int listItems = (hasIssues ? review.Issues.Count : 1) + review.Suggestions.Count;
+            QueryReviewResult review = result ?? new QueryReviewResult
+            {
+                Failed = true,
+                ErrorMessage = "No review result was returned."
+            };
+            List<string> issues = review.Issues ?? new List<string>();
+            List<string> suggestions = review.Suggestions ?? new List<string>();
+            bool hasFailure = review.Failed;
+            bool hasIssues = issues.Count > 0;
+            int listItems = (hasFailure ? 1 : hasIssues ? issues.Count : 1) + suggestions.Count;
             int expandedHeight = Math.Min(122, Math.Max(58, 42 + (listItems * 22)));
 
-            _pnlReviewResult.BackColor = hasIssues
+            _pnlReviewResult.BackColor = hasFailure || hasIssues
                 ? Color.FromArgb(45, 38, 18)
                 : Color.FromArgb(18, 45, 30);
 
@@ -893,9 +904,11 @@ namespace JobSearchBuilder
             Label title = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = hasIssues ? "Query review found " + review.Issues.Count + " issue(s)" : "Query review passed",
+                Text = hasFailure
+                    ? "Query review failed"
+                    : hasIssues ? "Query review found " + issues.Count + " issue(s)" : "Query review passed",
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
-                ForeColor = hasIssues ? Color.FromArgb(245, 190, 85) : Color.FromArgb(120, 220, 150),
+                ForeColor = hasFailure || hasIssues ? Color.FromArgb(245, 190, 85) : Color.FromArgb(120, 220, 150),
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
@@ -929,17 +942,24 @@ namespace JobSearchBuilder
                 Tag = "ReviewBody"
             };
 
-            if (!hasIssues)
+            if (hasFailure)
+            {
+                string errorMessage = string.IsNullOrWhiteSpace(review.ErrorMessage)
+                    ? "The query review could not be completed."
+                    : review.ErrorMessage;
+                list.Controls.Add(CreateReviewLabel("Error: " + errorMessage, Color.FromArgb(245, 190, 85), FontStyle.Bold));
+            }
+            else if (!hasIssues)
             {
                 list.Controls.Add(CreateReviewLabel("Query looks good", Color.FromArgb(120, 220, 150), FontStyle.Bold));
             }
             else
             {
-                foreach (string issue in review.Issues)
+                foreach (string issue in issues)
                     list.Controls.Add(CreateReviewLabel("Issue: " + issue, Color.FromArgb(245, 190, 85), FontStyle.Bold));
             }
 
-            foreach (string suggestion in review.Suggestions)
+            foreach (string suggestion in suggestions)
                 list.Controls.Add(CreateReviewLabel("Suggestion: " + suggestion, Color.FromArgb(220, 200, 150), FontStyle.Regular));
 
             _pnlReviewResult.Height = expandedHeight;

@@ -6,11 +6,14 @@ namespace JobSearchBuilder.Models
     {
         public List<string> Issues { get; set; }
         public List<string> Suggestions { get; set; }
+        public bool Failed { get; set; }
+        public string ErrorMessage { get; set; }
 
         public QueryReviewResult()
         {
             Issues = new List<string>();
             Suggestions = new List<string>();
+            ErrorMessage = string.Empty;
         }
     }
 }
