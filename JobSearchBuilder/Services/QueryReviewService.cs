@@ -38,13 +38,13 @@ namespace JobSearchBuilder.Services
 
                 LlmResponse response = await _provider.SendAsync(request).ConfigureAwait(false);
                 if (response == null)
-                    return new QueryReviewResult();
+                    return CreateFailedResult("The AI provider returned no response.");
 
                 return ParseResult(response.TextContent);
             }
-            catch
+            catch (Exception ex)
             {
-                return new QueryReviewResult();
+                return CreateFailedResult(ex.Message);
             }
         }
 
@@ -52,13 +52,24 @@ namespace JobSearchBuilder.Services
         {
             string json = StripMarkdownFence(textContent);
             if (string.IsNullOrWhiteSpace(json))
-                return new QueryReviewResult();
+                throw new InvalidOperationException("The AI provider returned an empty review response.");
 
             JObject root = JObject.Parse(json);
             return new QueryReviewResult
             {
                 Issues = ReadStringList(root, "issues", "Issues"),
                 Suggestions = ReadStringList(root, "suggestions", "Suggestions")
+            };
+        }
+
+        private static QueryReviewResult CreateFailedResult(string errorMessage)
+        {
+            return new QueryReviewResult
+            {
+                Failed = true,
+                ErrorMessage = string.IsNullOrWhiteSpace(errorMessage)
+                    ? "The query review could not be completed."
+                    : errorMessage
             };
         }
 

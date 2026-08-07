@@ -58,6 +58,8 @@ namespace JobSearchBuilder.Tests
         {
             QueryReviewResult result = await _service.ReviewAsync("site:greenhouse.io/jobs \"Developer\"");
 
+            Assert.That(result.Failed, Is.False);
+            Assert.That(result.ErrorMessage, Is.Empty);
             Assert.That(result.Issues, Is.Empty);
             Assert.That(result.Suggestions, Is.Empty);
         }
@@ -75,6 +77,8 @@ namespace JobSearchBuilder.Tests
 
             QueryReviewResult result = await _service.ReviewAsync("site:lever.co/jobs intern senior");
 
+            Assert.That(result.Failed, Is.False);
+            Assert.That(result.ErrorMessage, Is.Empty);
             Assert.That(result.Issues, Is.EqualTo(new[] { "Query mixes intern and senior terms." }));
             Assert.That(result.Suggestions, Is.EqualTo(new[] { "Pick one seniority level." }));
         }
@@ -89,8 +93,55 @@ namespace JobSearchBuilder.Tests
 
             QueryReviewResult result = await _service.ReviewAsync("site:ashbyhq.com jobs");
 
+            Assert.That(result.Failed, Is.False);
+            Assert.That(result.ErrorMessage, Is.Empty);
             Assert.That(result.Issues, Is.EqualTo(new[] { "Too broad." }));
             Assert.That(result.Suggestions, Is.EqualTo(new[] { "Add a role." }));
+        }
+
+        [Test]
+        public async Task ReviewAsync_ProviderThrows_ReturnsFailedResult()
+        {
+            _provider.NextException = new InvalidOperationException("API key is missing.");
+
+            QueryReviewResult result = await _service.ReviewAsync("site:greenhouse.io/jobs \"Developer\"");
+
+            Assert.That(result.Failed, Is.True);
+            Assert.That(result.ErrorMessage, Does.Contain("API key is missing."));
+            Assert.That(result.Issues, Is.Empty);
+            Assert.That(result.Suggestions, Is.Empty);
+        }
+
+        [Test]
+        public async Task ReviewAsync_InvalidJson_ReturnsFailedResult()
+        {
+            _provider.NextResponse = new LlmResponse
+            {
+                TextContent = "not json"
+            };
+
+            QueryReviewResult result = await _service.ReviewAsync("site:greenhouse.io/jobs \"Developer\"");
+
+            Assert.That(result.Failed, Is.True);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.Issues, Is.Empty);
+            Assert.That(result.Suggestions, Is.Empty);
+        }
+
+        [Test]
+        public async Task ReviewAsync_EmptyProviderResponse_ReturnsFailedResult()
+        {
+            _provider.NextResponse = new LlmResponse
+            {
+                TextContent = string.Empty
+            };
+
+            QueryReviewResult result = await _service.ReviewAsync("site:greenhouse.io/jobs \"Developer\"");
+
+            Assert.That(result.Failed, Is.True);
+            Assert.That(result.ErrorMessage, Does.Contain("empty review response"));
+            Assert.That(result.Issues, Is.Empty);
+            Assert.That(result.Suggestions, Is.Empty);
         }
 
         [Test]
