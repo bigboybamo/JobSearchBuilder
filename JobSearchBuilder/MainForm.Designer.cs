@@ -679,22 +679,25 @@
 
         private void ConfigureChipPanel(System.Windows.Forms.FlowLayoutPanel panel)
         {
-            panel.Width = 880;
             panel.AutoSize = true;
             panel.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            panel.MinimumSize = new System.Drawing.Size(880, 34);
-            panel.MinimumSize = new System.Drawing.Size(880, 32);
+            panel.MinimumSize = new System.Drawing.Size(0, ChipPanelMinHeight);
             panel.BackColor = System.Drawing.Color.White;
             panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             panel.Padding = new System.Windows.Forms.Padding(4);
             panel.FlowDirection = System.Windows.Forms.FlowDirection.LeftToRight;
             panel.WrapContents = true;
+
+            // ApplySectionWidth caps the width so chips wrap onto a new row
+            // instead of the panel growing sideways. The real width is set by
+            // LayoutEditorSections once the editor has been sized.
+            ApplySectionWidth(panel, DefaultSectionWidth);
         }
 
         private void ConfigureSectionHeader(System.Windows.Forms.Label lbl, string text)
         {
             lbl.Text = text;
-            lbl.Width = 880;
+            lbl.Width = DefaultSectionWidth;
             lbl.Height = 22;
             lbl.Font = new System.Drawing.Font("Segoe UI", 7.5F, System.Drawing.FontStyle.Bold);
             lbl.ForeColor = System.Drawing.Color.FromArgb(100, 100, 120);
