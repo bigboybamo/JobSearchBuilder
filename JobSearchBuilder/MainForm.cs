@@ -39,6 +39,17 @@ namespace JobSearchBuilder
         private Panel _pnlReviewResult;
         private Button _btnReviewQuery;
         private Button _btnBulkDescribe;
+        private List<Control> _widthSyncedSections;
+        private int _sectionWidth;
+
+        // Width used until the editor is laid out for the first time.
+        private const int DefaultSectionWidth = 880;
+        private const int MinimumSectionWidth = 420;
+        private const int ChipPanelMinHeight = 32;
+        private const int AddRowMinHeight = 30;
+        // flpEditor sits inside pnlScroll's left padding and each section
+        // carries the default 3px FlowLayoutPanel margin on both sides.
+        private const int SectionMarginAllowance = 10;
 
         public MainForm()
         {
@@ -101,6 +112,14 @@ namespace JobSearchBuilder
             ConfigureChipPanel(flpTimezone);
             ConfigureChipPanel(flpExclude);
             flpExclude.BackColor = Color.FromArgb(255, 248, 248);
+
+            AddClearAllButton(lblStackHeader, flpStack);
+            AddClearAllButton(lblRolesHeader, flpRoles);
+            AddClearAllButton(lblLocationsHeader, flpLocations);
+            AddClearAllButton(lblVisaHeader, flpVisa);
+            AddClearAllButton(lblRemoteHeader, flpRemote);
+            AddClearAllButton(lblTimezoneHeader, flpTimezone);
+            AddClearAllButton(lblExcludeHeader, flpExclude);
 
             // Suggestion buttons for each keyword section
             List<string> stackSugg = new List<string> { "C#", ".NET", "ASP.NET Core", "Azure", "React", "TypeScript", "Python", "Java" };
@@ -230,6 +249,106 @@ namespace JobSearchBuilder
 
             AddReviewQueryPanel();
             AddReviewQueryButton();
+
+            InitializeSectionLayout();
+        }
+
+        // -------------------------------------------------------------------
+        // Editor section layout
+        //
+        // A FlowLayoutPanel with AutoSize on is measured against an unbounded
+        // width by its parent, so it lays every chip out on one line and grows
+        // sideways instead of wrapping. Capping MaximumSize.Width forces the
+        // wrap; MaximumSize.Height stays 0 so the panel is free to grow taller
+        // as rows are added. Widths are recomputed whenever the editor resizes
+        // so the wrap point follows the visible width.
+        // -------------------------------------------------------------------
+
+        private void InitializeSectionLayout()
+        {
+            FlowLayoutPanel[] addRows = new FlowLayoutPanel[]
+            {
+                flpStackAddRow, flpRolesAddRow, flpLocationsAddRow, flpVisaAddRow,
+                flpRemoteAddRow, flpTimezoneAddRow, flpExcludeAddRow
+            };
+
+            // Suggestion buttons wrap the same way the chips do, rather than
+            // being clipped by a fixed row height.
+            foreach (FlowLayoutPanel row in addRows)
+            {
+                row.FlowDirection = FlowDirection.LeftToRight;
+                row.WrapContents = true;
+                row.AutoSize = true;
+                row.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+                row.MinimumSize = new Size(0, AddRowMinHeight);
+            }
+
+            _widthSyncedSections = new List<Control>
+            {
+                lblAtsHeader, clbAtsGroups, pnlAtsSpacer,
+                lblStackHeader, flpStack,
+                lblRolesHeader, flpRoles,
+                lblLocationsHeader, flpLocations,
+                lblVisaHeader, flpVisa,
+                lblRemoteHeader, flpRemote,
+                lblTimezoneHeader, flpTimezone,
+                lblExcludeHeader, flpExclude
+            };
+            _widthSyncedSections.AddRange(addRows);
+            if (_aiSuggestionPanels != null)
+                _widthSyncedSections.AddRange(_aiSuggestionPanels);
+
+            pnlScroll.SizeChanged += pnlScroll_SizeChanged;
+            LayoutEditorSections();
+        }
+
+        private void pnlScroll_SizeChanged(object sender, EventArgs e)
+        {
+            LayoutEditorSections();
+        }
+
+        private void LayoutEditorSections()
+        {
+            if (_widthSyncedSections == null)
+                return;
+
+            // Reserve the vertical scrollbar unconditionally — measuring the
+            // client area instead would change the answer each time the
+            // scrollbar appeared or vanished.
+            int available = pnlScroll.Width
+                            - pnlScroll.Padding.Horizontal
+                            - SystemInformation.VerticalScrollBarWidth
+                            - SectionMarginAllowance;
+
+            if (available < MinimumSectionWidth)
+                available = MinimumSectionWidth;
+            if (available == _sectionWidth)
+                return;
+
+            _sectionWidth = available;
+
+            flpEditor.SuspendLayout();
+            try
+            {
+                foreach (Control section in _widthSyncedSections)
+                    ApplySectionWidth(section, available);
+            }
+            finally
+            {
+                flpEditor.ResumeLayout(true);
+            }
+        }
+
+        private void ApplySectionWidth(Control section, int width)
+        {
+            FlowLayoutPanel flow = section as FlowLayoutPanel;
+            if (flow != null && flow.AutoSize)
+            {
+                flow.MinimumSize = new Size(width, flow.MinimumSize.Height);
+                flow.MaximumSize = new Size(width, 0);
+            }
+
+            section.Width = width;
         }
 
         private void AddDescribeRoleButton()
@@ -1170,6 +1289,50 @@ namespace JobSearchBuilder
         // -------------------------------------------------------------------
         // Chip helpers
         // -------------------------------------------------------------------
+
+        /// <summary>
+        /// Adds a "clear all" control to the right-hand end of a section header.
+        /// It hosts on the header rather than in the chip panel itself so the
+        /// flow layout cannot push it out of the corner as chips wrap.
+        /// </summary>
+        private void AddClearAllButton(Label header, FlowLayoutPanel chipPanel)
+        {
+            Color idle = header.ForeColor;
+            Color hover = Color.FromArgb(220, 50, 50);
+
+            Label clear = new Label
+            {
+                Text = "✕ Clear all",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
+                ForeColor = idle,
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Visible = false
+            };
+
+            header.Controls.Add(clear);
+            clear.Left = header.Width - clear.PreferredWidth - 4;
+            clear.Top = header.Height - clear.PreferredHeight - 2;
+
+            clear.MouseEnter += (s, e) => clear.ForeColor = hover;
+            clear.MouseLeave += (s, e) => clear.ForeColor = idle;
+            clear.Click += (s, e) =>
+            {
+                if (GetChips(chipPanel).Count == 0)
+                    return;
+
+                ClearChips(chipPanel);
+                MarkDirtyAndRebuild();
+            };
+
+            // Only offer the control when there is something to clear. Driven by
+            // the panel's own events so every add/remove path stays in sync.
+            ControlEventHandler syncVisibility =
+                (s, e) => clear.Visible = GetChips(chipPanel).Count > 0;
+            chipPanel.ControlAdded += syncVisibility;
+            chipPanel.ControlRemoved += syncVisibility;
+        }
 
         private void AddChip(FlowLayoutPanel panel, string term, bool isExclude = false)
         {
