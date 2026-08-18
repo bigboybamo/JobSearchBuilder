@@ -44,6 +44,21 @@ namespace JobSearchBuilder.Tests
         }
 
         [Test]
+        public void ParseApiResponse_ObjectWithDataArray_ExtractsCommonNames()
+        {
+            string json = @"{
+                ""data"": [
+                    { ""names"": { ""common"": ""Nigeria"" } },
+                    { ""names"": { ""common"": ""United Kingdom"" } }
+                ]
+            }";
+
+            List<string> result = CountryService.ParseApiResponse(json);
+
+            Assert.That(result, Is.EqualTo(new[] { "Nigeria", "United Kingdom" }));
+        }
+
+        [Test]
         public void ParseApiResponse_ResultIsSortedAlphabetically()
         {
             string json = @"[
@@ -211,6 +226,26 @@ namespace JobSearchBuilder.Tests
             List<string> result = service.GetCountries();
 
             Assert.That(result, Is.Empty);
+            Assert.That(File.Exists(_tempCache), Is.True);
+        }
+
+        [Test]
+        public void GetCountries_ApiReturnsErrorObject_UsesFallbackCountries()
+        {
+            string apiJson = @"{
+                ""success"": false,
+                ""data"": null,
+                ""errors"": [
+                    { ""message"": ""This API version has been deprecated."" }
+                ]
+            }";
+            CountryService service = new CountryService(_tempCache, () => apiJson);
+
+            List<string> result = service.GetCountries();
+
+            Assert.That(result, Does.Contain("United Kingdom"));
+            Assert.That(result, Does.Contain("United States"));
+            Assert.That(result, Does.Contain("Nigeria"));
             Assert.That(File.Exists(_tempCache), Is.True);
         }
     }

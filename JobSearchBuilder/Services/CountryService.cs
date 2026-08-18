@@ -55,7 +55,21 @@ namespace JobSearchBuilder.Services
         private List<string> FetchFromApi()
         {
             string json = _fetchJson();
-            return ParseApiResponse(json);
+
+            JToken root;
+            try
+            {
+                root = JToken.Parse(json);
+            }
+            catch
+            {
+                return GetFallbackCountries();
+            }
+
+            if (IsApiErrorResponse(root))
+                return GetFallbackCountries();
+
+            return ParseApiResponse(root);
         }
 
         private void SaveToCache(List<string> countries)
@@ -66,16 +80,107 @@ namespace JobSearchBuilder.Services
         /// <summary>Extracted for unit testing — parses the REST Countries API JSON payload.</summary>
         public static List<string> ParseApiResponse(string json)
         {
-            JArray arr = JArray.Parse(json);
+            return ParseApiResponse(JToken.Parse(json));
+        }
+
+        private static List<string> ParseApiResponse(JToken root)
+        {
+            JArray arr = root as JArray;
+            if (arr == null)
+            {
+                JObject obj = root as JObject;
+                if (obj != null)
+                {
+                    arr = obj["data"] as JArray
+                          ?? obj["countries"] as JArray
+                          ?? obj["results"] as JArray;
+                }
+            }
+
             List<string> names = new List<string>();
+            if (arr == null)
+                return names;
+
             foreach (JObject country in arr)
             {
-                string name = (string)country["name"]?["common"];
+                string name = (string)country["name"]?["common"]
+                              ?? (string)country["names"]?["common"];
                 if (!string.IsNullOrWhiteSpace(name))
                     names.Add(name);
             }
             names.Sort(StringComparer.OrdinalIgnoreCase);
             return names;
+        }
+
+        private static bool IsApiErrorResponse(JToken root)
+        {
+            JObject obj = root as JObject;
+            if (obj == null)
+                return false;
+
+            JToken success = obj["success"];
+            if (success != null && success.Type == JTokenType.Boolean && !(bool)success)
+                return true;
+
+            if (obj["errors"] != null || obj["error"] != null)
+                return true;
+
+            if (obj["message"] != null &&
+                obj["data"] == null &&
+                obj["countries"] == null &&
+                obj["results"] == null)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private static List<string> GetFallbackCountries()
+        {
+            List<string> countries = new List<string>
+            {
+                "Argentina",
+                "Australia",
+                "Austria",
+                "Belgium",
+                "Brazil",
+                "Canada",
+                "Chile",
+                "China",
+                "Colombia",
+                "Denmark",
+                "Egypt",
+                "Finland",
+                "France",
+                "Germany",
+                "Ghana",
+                "Greece",
+                "India",
+                "Indonesia",
+                "Ireland",
+                "Israel",
+                "Italy",
+                "Japan",
+                "Kenya",
+                "Mexico",
+                "Netherlands",
+                "New Zealand",
+                "Nigeria",
+                "Norway",
+                "Poland",
+                "Portugal",
+                "Singapore",
+                "South Africa",
+                "Spain",
+                "Sweden",
+                "Switzerland",
+                "United Arab Emirates",
+                "United Kingdom",
+                "United States"
+            };
+            countries.Sort(StringComparer.OrdinalIgnoreCase);
+            return countries;
         }
 
         /// <summary>Extracted for unit testing — parses the local cache JSON file.</summary>
