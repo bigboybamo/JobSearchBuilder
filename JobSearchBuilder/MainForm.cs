@@ -38,7 +38,11 @@ namespace JobSearchBuilder
         private bool _activeSuggIsExclude;
         private Panel _pnlReviewResult;
         private Button _btnReviewQuery;
+        private Button _btnDescribeRole;
         private Button _btnBulkDescribe;
+        private Panel _pnlAtsRangeBar;
+        private FlowLayoutPanel _flpAtsRangeButtons;
+        private bool _suppressAtsGroupChecks;
         private List<Control> _widthSyncedSections;
         private int _sectionWidth;
 
@@ -89,10 +93,13 @@ namespace JobSearchBuilder
             if (cboSeniority.Items.Count > 0)
                 cboSeniority.SelectedIndex = 0;
 
-            // ATS groups checklist — height adjusted to fit all items
+            // ATS groups checklist — capped so lower sets can be brought into
+            // view inside the list when a range button is clicked.
             foreach (AtsSourceGroup g in _config.AtsSourceGroups)
                 clbAtsGroups.Items.Add(g, false);
-            clbAtsGroups.Height = (_config.AtsSourceGroups.Count * 22) + 6;
+            int visibleAtsRows = Math.Min(_config.AtsSourceGroups.Count, 10);
+            clbAtsGroups.Height = (visibleAtsRows * 22) + 6;
+            AddAtsRangeButtons();
 
             // Section headers and chip panel styling
             ConfigureSectionHeader(lblStackHeader, "TECH STACK");
@@ -184,6 +191,8 @@ namespace JobSearchBuilder
 
             AddDescribeRoleButton();
             AddBulkDescribeButton();
+            pnlEditor.SizeChanged += (s, e) => LayoutTopActionButtons();
+            LayoutTopActionButtons();
 
             Panel pnlFooter = new Panel
             {
@@ -351,9 +360,257 @@ namespace JobSearchBuilder
             section.Width = width;
         }
 
+        private void LayoutAtsRangeBar()
+        {
+            if (_pnlAtsRangeBar == null || _flpAtsRangeButtons == null)
+                return;
+
+            int width = pnlScroll.ClientSize.Width - SystemInformation.VerticalScrollBarWidth;
+            if (width < MinimumSectionWidth)
+                width = MinimumSectionWidth;
+
+            _pnlAtsRangeBar.Location = pnlScroll.Location;
+            _pnlAtsRangeBar.Width = width;
+            _flpAtsRangeButtons.Width = width - _pnlAtsRangeBar.Padding.Horizontal;
+            _flpAtsRangeButtons.MaximumSize = new Size(_flpAtsRangeButtons.Width, 0);
+
+            int height = Math.Max(38, _flpAtsRangeButtons.PreferredSize.Height + _pnlAtsRangeBar.Padding.Vertical);
+            _pnlAtsRangeBar.Height = height;
+
+            int editorTop = height + 4;
+            if (flpEditor.Top != editorTop)
+                flpEditor.Top = editorTop;
+
+            _pnlAtsRangeBar.BringToFront();
+        }
+
+        private void LayoutTopActionButtons()
+        {
+            int right = 12;
+            int gap = 8;
+            int top = Math.Max(6, (tblTopRow.Height - btnSaveProfile.Height) / 2);
+            int reservedWidth = btnSaveProfile.Width + (2 * gap) + 126 + 126 + 24;
+
+            tblTopRow.Padding = new Padding(4, 4, reservedWidth, 4);
+
+            btnSaveProfile.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnSaveProfile.Top = top;
+            btnSaveProfile.Left = pnlEditor.ClientSize.Width - btnSaveProfile.Width - right;
+
+            if (_btnDescribeRole != null)
+            {
+                _btnDescribeRole.Top = top;
+                _btnDescribeRole.Left = btnSaveProfile.Left - _btnDescribeRole.Width - gap;
+            }
+
+            if (_btnBulkDescribe != null)
+            {
+                _btnBulkDescribe.Top = top;
+                _btnBulkDescribe.Left = _btnDescribeRole.Left - _btnBulkDescribe.Width - gap;
+            }
+        }
+
+        private void AddAtsRangeButtons()
+        {
+            _pnlAtsRangeBar = new Panel
+            {
+                BackColor = Color.FromArgb(245, 246, 250),
+                Padding = new Padding(4, 4, 4, 4)
+            };
+
+            _flpAtsRangeButtons = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0),
+                Padding = new Padding(0),
+            };
+
+            const int rangeSize = 4;
+            for (int startIndex = 0; startIndex < _config.AtsSourceGroups.Count; startIndex += rangeSize)
+            {
+                List<AtsSourceGroup> range = _config.AtsSourceGroups
+                    .Skip(startIndex)
+                    .Take(rangeSize)
+                    .ToList();
+
+                if (range.Count == 0)
+                    continue;
+
+                int firstId = range.First().Id;
+                int lastId = range.Last().Id;
+                Button button = CreateAtsRangeButton(firstId, lastId);
+                button.Tag = new AtsRangeButtonInfo(firstId, lastId);
+                button.Click += (s, e) => SelectAtsRange(firstId, lastId);
+                _flpAtsRangeButtons.Controls.Add(button);
+            }
+
+            _pnlAtsRangeBar.Controls.Add(_flpAtsRangeButtons);
+            pnlEditor.Controls.Add(_pnlAtsRangeBar);
+            pnlScroll.SizeChanged += (s, e) => LayoutAtsRangeBar();
+            pnlScroll.LocationChanged += (s, e) => LayoutAtsRangeBar();
+            LayoutAtsRangeBar();
+            SyncAtsRangeButtons();
+        }
+
+        private static Button CreateAtsRangeButton(int firstId, int lastId)
+        {
+            string label = firstId == lastId
+                ? "Set " + firstId
+                : "Sets " + firstId + "-" + lastId;
+
+            Button button = new Button
+            {
+                Text = label,
+                AutoSize = true,
+                BackColor = Color.FromArgb(240, 243, 255),
+                ForeColor = Color.FromArgb(37, 99, 235),
+                Cursor = Cursors.Hand,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Height = 26,
+                Margin = new Padding(0, 0, 6, 4),
+                Padding = new Padding(8, 2, 8, 2),
+                UseVisualStyleBackColor = false
+            };
+            button.FlatAppearance.BorderColor = Color.FromArgb(145, 170, 235);
+            button.FlatAppearance.BorderSize = 1;
+            return button;
+        }
+
+        private void SelectAtsRange(int firstId, int lastId)
+        {
+            bool shouldCheck = !AreAllAtsGroupsChecked(firstId, lastId);
+
+            _suppressAtsGroupChecks = true;
+            clbAtsGroups.BeginUpdate();
+            try
+            {
+                for (int i = 0; i < clbAtsGroups.Items.Count; i++)
+                {
+                    AtsSourceGroup group = clbAtsGroups.Items[i] as AtsSourceGroup;
+                    if (group != null && group.Id >= firstId && group.Id <= lastId)
+                        clbAtsGroups.SetItemChecked(i, shouldCheck);
+                }
+            }
+            finally
+            {
+                clbAtsGroups.EndUpdate();
+                _suppressAtsGroupChecks = false;
+            }
+
+            ScrollAtsRangeIntoView(firstId);
+            SyncAtsRangeButtons();
+            MarkDirtyAndRebuild();
+        }
+
+        private bool AreAllAtsGroupsChecked(int firstId, int lastId)
+        {
+            bool found = false;
+            for (int i = 0; i < clbAtsGroups.Items.Count; i++)
+            {
+                AtsSourceGroup group = clbAtsGroups.Items[i] as AtsSourceGroup;
+                if (group == null || group.Id < firstId || group.Id > lastId)
+                    continue;
+
+                found = true;
+                if (!clbAtsGroups.GetItemChecked(i))
+                    return false;
+            }
+
+            return found;
+        }
+
+        private void ScrollAtsRangeIntoView(int firstId)
+        {
+            int firstIndex = -1;
+            for (int i = 0; i < clbAtsGroups.Items.Count; i++)
+            {
+                AtsSourceGroup group = clbAtsGroups.Items[i] as AtsSourceGroup;
+                if (group != null && group.Id == firstId)
+                {
+                    firstIndex = i;
+                    break;
+                }
+            }
+
+            if (firstIndex < 0)
+                return;
+
+            clbAtsGroups.TopIndex = firstIndex;
+
+            int targetY = flpEditor.Top + lblAtsHeader.Top;
+            if (_pnlAtsRangeBar != null)
+                targetY -= _pnlAtsRangeBar.Height + 8;
+
+            if (targetY < 0)
+                targetY = 0;
+
+            pnlScroll.AutoScrollPosition = new Point(0, targetY);
+            if (_pnlAtsRangeBar != null)
+                _pnlAtsRangeBar.BringToFront();
+        }
+
+        private void SyncAtsRangeButtons()
+        {
+            if (_flpAtsRangeButtons == null)
+                return;
+
+            foreach (Control control in _flpAtsRangeButtons.Controls)
+            {
+                Button button = control as Button;
+                AtsRangeButtonInfo info = button != null ? button.Tag as AtsRangeButtonInfo : null;
+                if (button == null || info == null)
+                    continue;
+
+                bool allChecked = AreAllAtsGroupsChecked(info.FirstId, info.LastId);
+                bool anyChecked = IsAnyAtsGroupChecked(info.FirstId, info.LastId);
+                ApplyAtsRangeButtonStyle(button, allChecked, anyChecked);
+            }
+        }
+
+        private bool IsAnyAtsGroupChecked(int firstId, int lastId)
+        {
+            for (int i = 0; i < clbAtsGroups.Items.Count; i++)
+            {
+                AtsSourceGroup group = clbAtsGroups.Items[i] as AtsSourceGroup;
+                if (group != null && group.Id >= firstId && group.Id <= lastId && clbAtsGroups.GetItemChecked(i))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static void ApplyAtsRangeButtonStyle(Button button, bool allChecked, bool anyChecked)
+        {
+            if (allChecked)
+            {
+                button.BackColor = Color.FromArgb(37, 99, 235);
+                button.ForeColor = Color.White;
+                button.FlatAppearance.BorderColor = Color.FromArgb(37, 99, 235);
+                return;
+            }
+
+            if (anyChecked)
+            {
+                button.BackColor = Color.FromArgb(225, 235, 255);
+                button.ForeColor = Color.FromArgb(30, 70, 150);
+                button.FlatAppearance.BorderColor = Color.FromArgb(90, 130, 220);
+                return;
+            }
+
+            button.BackColor = Color.FromArgb(240, 243, 255);
+            button.ForeColor = Color.FromArgb(37, 99, 235);
+            button.FlatAppearance.BorderColor = Color.FromArgb(145, 170, 235);
+        }
+
+
         private void AddDescribeRoleButton()
         {
-            Button btnDescribeRole = new Button
+            _btnDescribeRole = new Button
             {
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 BackColor = Color.FromArgb(80, 70, 180),
@@ -368,9 +625,9 @@ namespace JobSearchBuilder
                 Text = "Describe Role",
                 UseVisualStyleBackColor = false
             };
-            btnDescribeRole.Click += btnDescribeRole_Click;
-            pnlEditor.Controls.Add(btnDescribeRole);
-            btnDescribeRole.BringToFront();
+            _btnDescribeRole.Click += btnDescribeRole_Click;
+            pnlEditor.Controls.Add(_btnDescribeRole);
+            _btnDescribeRole.BringToFront();
         }
 
         private void AddBulkDescribeButton()
@@ -778,8 +1035,15 @@ namespace JobSearchBuilder
 
         private void clbAtsGroups_ItemCheck(object sender, ItemCheckEventArgs e)
         {
+            if (_isLoading || _suppressAtsGroupChecks)
+                return;
+
             if (IsHandleCreated)
-                BeginInvoke((MethodInvoker)(() => MarkDirtyAndRebuild()));
+                BeginInvoke((MethodInvoker)(() =>
+                {
+                    SyncAtsRangeButtons();
+                    MarkDirtyAndRebuild();
+                }));
         }
 
         private void btnNewProfile_Click(object sender, EventArgs e)
@@ -1183,6 +1447,7 @@ namespace JobSearchBuilder
             foreach (string k in profile.ExcludeKeywords ?? Enumerable.Empty<string>()) AddChip(flpExclude, k, isExclude: true);
             _isLoading = false;
             _isDirty = false;
+            SyncAtsRangeButtons();
             RebuildQuery();
         }
 
@@ -1728,6 +1993,18 @@ namespace JobSearchBuilder
         {
             public string Description { get; set; }
             public bool SaveAsNewProfile { get; set; }
+        }
+
+        private class AtsRangeButtonInfo
+        {
+            public AtsRangeButtonInfo(int firstId, int lastId)
+            {
+                FirstId = firstId;
+                LastId = lastId;
+            }
+
+            public int FirstId { get; private set; }
+            public int LastId { get; private set; }
         }
     }
 
