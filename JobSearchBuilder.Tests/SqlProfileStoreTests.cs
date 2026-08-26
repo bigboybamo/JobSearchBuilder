@@ -117,6 +117,25 @@ namespace JobSearchBuilder.Tests
         }
 
         [Test]
+        public void Save_NewProfile_NullNameAndSeniority_NormalizesRequiredFields()
+        {
+            // Arrange
+            SearchProfile profile = new SearchProfile
+            {
+                Name = null,
+                Seniority = null
+            };
+
+            // Act
+            Assert.DoesNotThrow(() => _store.Save(profile));
+            SearchProfile loaded = _store.GetById(profile.Id);
+
+            // Assert
+            Assert.That(loaded.Name, Is.EqualTo(string.Empty));
+            Assert.That(loaded.Seniority, Is.EqualTo("Any"));
+        }
+
+        [Test]
         public void Save_NewProfile_PersistsAllKeywordCategories()
         {
             // Arrange
@@ -281,6 +300,24 @@ namespace JobSearchBuilder.Tests
 
             // Assert
             Assert.That(_store.GetById(profile.Id).SourceGroupIds, Is.EquivalentTo(new[] { 3 }));
+        }
+
+        [Test]
+        public void Save_ExistingProfile_NullNameAndSeniority_NormalizesRequiredFields()
+        {
+            // Arrange
+            SearchProfile profile = new SearchProfile { Name = "Original", Seniority = "Senior" };
+            _store.Save(profile);
+
+            // Act
+            profile.Name = null;
+            profile.Seniority = null;
+            Assert.DoesNotThrow(() => _store.Save(profile));
+            SearchProfile loaded = _store.GetById(profile.Id);
+
+            // Assert
+            Assert.That(loaded.Name, Is.EqualTo(string.Empty));
+            Assert.That(loaded.Seniority, Is.EqualTo("Any"));
         }
 
         [Test]
