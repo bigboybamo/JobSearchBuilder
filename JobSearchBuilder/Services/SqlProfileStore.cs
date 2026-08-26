@@ -22,6 +22,8 @@ namespace JobSearchBuilder.Services
 
         public SearchProfile Save(SearchProfile profile)
         {
+            NormalizeRequiredFields(profile);
+
             if (profile.Id == 0)
                 Insert(profile);
             else
@@ -43,6 +45,18 @@ namespace JobSearchBuilder.Services
         // -------------------------------------------------------------------
         // Private helpers
         // -------------------------------------------------------------------
+
+        private static void NormalizeRequiredFields(SearchProfile profile)
+        {
+            if (profile == null)
+                throw new ArgumentNullException("profile");
+
+            if (profile.Name == null)
+                profile.Name = string.Empty;
+
+            if (profile.Seniority == null)
+                profile.Seniority = "Any";
+        }
 
         private List<SearchProfile> LoadProfiles(int? filterId)
         {
@@ -265,7 +279,7 @@ namespace JobSearchBuilder.Services
         {
             IDbDataParameter p = cmd.CreateParameter();
             p.ParameterName = name;
-            p.Value = value;
+            p.Value = value ?? DBNull.Value;
             cmd.Parameters.Add(p);
         }
 
