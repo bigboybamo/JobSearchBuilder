@@ -136,12 +136,25 @@ namespace JobSearchBuilder.Services
 
         private static string Quote(string term)
         {
-            return term.StartsWith("\"") ? term : "\"" + term + "\"";
+            if (term.StartsWith("\""))
+                term = term.Substring(1);
+
+            if (term.EndsWith("\""))
+                term = term.Substring(0, term.Length - 1);
+
+            term = term.Replace("\"", "\\\"");
+            return "\"" + term + "\"";
         }
 
         private static string QuoteIfNeeded(string term)
         {
-            return (term.Contains(' ') || term.Contains('.')) ? Quote(term) : term;
+            bool containsWhitespace = term.Any(char.IsWhiteSpace);
+            bool containsOperatorCharacter = term.IndexOfAny(new[] { '.', '+', '-', '(', ')', '"' }) >= 0;
+            bool isOrOperator = string.Equals(term, "OR", StringComparison.OrdinalIgnoreCase);
+
+            return (containsWhitespace || containsOperatorCharacter || isOrOperator)
+                ? Quote(term)
+                : term;
         }
 
         private static string BuildGoogleUrl(string query)
