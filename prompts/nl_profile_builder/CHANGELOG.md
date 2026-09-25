@@ -1,5 +1,20 @@
 # nl_profile_builder Prompt Changelog
 
+## v4 — Multiple role extraction (2026-09-25)
+
+**Changes from v3:**
+1. Replaced the scalar `role` tool field with a `roles` string array so each distinct job title becomes its own query chip.
+2. Added explicit instructions not to join multiple titles with commas, slashes, or conjunctions.
+3. Kept parser compatibility with legacy scalar `role` responses without delimiter-based splitting.
+4. Added a three-role golden-set case and migrated existing expected results to the plural contract.
+5. Synchronized the runtime XML with the normalization, seniority, and timezone constraints already used by the Promptfoo message template.
+
+**Eval results vs v3 baseline:** Pending the required Promptfoo run.
+
+**v4 is the active prompt.**
+
+---
+
 ## v3 — Location and visa extraction (2026-06-15)
 
 **Changes from v2:**

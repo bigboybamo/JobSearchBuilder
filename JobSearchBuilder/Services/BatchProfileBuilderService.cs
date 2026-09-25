@@ -12,7 +12,7 @@ namespace JobSearchBuilder.Services
 {
     public class BatchProfileBuilderService
     {
-        private const string ToolName = "build_query_profile";
+        private const string ToolName = QueryProfileToolContract.ToolName;
         private const int MaxPollDurationMs = 600000;
 
         private static readonly HttpClient _sharedHttpClient = new HttpClient();
@@ -141,8 +141,8 @@ namespace JobSearchBuilder.Services
 
         private JObject BuildAnthropicBatchRequest(IList<string> descriptions)
         {
-            string prompt = _promptLoader.Load("nl_profile_builder", "v3");
-            JObject schema = JObject.Parse(GetToolSchema());
+            string prompt = _promptLoader.Load("nl_profile_builder", "v4");
+            JObject schema = JObject.Parse(QueryProfileToolContract.GetToolSchema());
             JArray requests = new JArray();
 
             for (int i = 0; i < descriptions.Count; i++)
@@ -280,7 +280,7 @@ namespace JobSearchBuilder.Services
                         return new BatchProfileResult
                         {
                             Description = description,
-                            Profile = ParseProfile(input == null ? string.Empty : input.ToString(Formatting.None)),
+                            Profile = QueryProfileToolContract.ParseProfile(input == null ? string.Empty : input.ToString(Formatting.None)),
                             IsError = false
                         };
                     }
@@ -295,59 +295,6 @@ namespace JobSearchBuilder.Services
             };
         }
 
-        private static QueryProfileResult ParseProfile(string argumentsJson)
-        {
-            if (string.IsNullOrWhiteSpace(argumentsJson))
-                throw new InvalidOperationException("The profile tool result was empty.");
 
-            JObject root = JObject.Parse(argumentsJson);
-            return new QueryProfileResult
-            {
-                Role = (string)root["role"] ?? (string)root["Role"] ?? string.Empty,
-                Seniority = (string)root["seniority"] ?? (string)root["Seniority"] ?? string.Empty,
-                TechStack = ReadStringList(root, "tech_stack", "TechStack"),
-                Locations = ReadStringList(root, "locations", "Locations"),
-                VisaTerms = ReadStringList(root, "visa_terms", "VisaTerms"),
-                RemoteTerms = ReadStringList(root, "remote_terms", "RemoteTerms"),
-                TimezoneTerms = ReadStringList(root, "timezone_terms", "TimezoneTerms"),
-                ExcludeTerms = ReadStringList(root, "exclude_terms", "ExcludeTerms")
-            };
-        }
-
-        private static List<string> ReadStringList(JObject root, string snakeName, string pascalName)
-        {
-            List<string> values = new List<string>();
-            JArray array = root[snakeName] as JArray ?? root[pascalName] as JArray;
-            if (array == null)
-                return values;
-
-            foreach (JToken token in array)
-            {
-                string value = ((string)token ?? string.Empty).Trim();
-                if (!string.IsNullOrWhiteSpace(value))
-                    values.Add(value);
-            }
-
-            return values;
-        }
-
-        private static string GetToolSchema()
-        {
-            return @"{
-  ""type"": ""object"",
-  ""properties"": {
-    ""role"": { ""type"": ""string"" },
-    ""seniority"": { ""type"": ""string"" },
-    ""tech_stack"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
-    ""locations"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
-    ""visa_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
-    ""remote_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
-    ""timezone_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
-    ""exclude_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } }
-  },
-  ""required"": [""role"", ""seniority"", ""tech_stack"", ""locations"", ""visa_terms"", ""remote_terms"", ""timezone_terms"", ""exclude_terms""],
-  ""additionalProperties"": false
-}";
-        }
     }
 }

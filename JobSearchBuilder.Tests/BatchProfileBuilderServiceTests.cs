@@ -28,7 +28,7 @@ namespace JobSearchBuilder.Tests
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "JobSearchBuilderTests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(_tempRoot, "nl_profile_builder"));
-            File.WriteAllText(Path.Combine(_tempRoot, "nl_profile_builder", "v3.xml"), "<prompt><instructions>test prompt</instructions></prompt>");
+            File.WriteAllText(Path.Combine(_tempRoot, "nl_profile_builder", "v4.xml"), "<prompt><instructions>test prompt</instructions></prompt>");
 
             _provider = new InMemoryLlmProvider();
             _provider.NextResponse = CreateValidLlmResponse("Developer");
@@ -73,7 +73,7 @@ namespace JobSearchBuilder.Tests
         {
             List<BatchProfileResult> results = await _service.BuildBatchAsync(new List<string> { "Senior .NET developer" });
 
-            Assert.That(results[0].Profile.Role, Is.EqualTo("Developer"));
+            Assert.That(results[0].Profile.Roles, Is.EqualTo(new[] { "Developer" }));
             Assert.That(results[0].Profile.Seniority, Is.EqualTo("Senior"));
             Assert.That(results[0].Profile.TechStack, Is.EqualTo(new[] { "C#", ".NET" }));
         }
@@ -133,7 +133,36 @@ namespace JobSearchBuilder.Tests
             List<BatchProfileResult> results = await service.BuildBatchAsync(new List<string> { "Engineer" });
 
             Assert.That(results[0].IsError, Is.False);
-            Assert.That(results[0].Profile.Role, Is.EqualTo("Engineer"));
+            Assert.That(results[0].Profile.Roles, Is.EqualTo(new[] { "Engineer" }));
+        }
+
+        [Test]
+        public async Task BuildBatchAsync_AnthropicProvider_MultipleRoles_ReturnsOneEntryPerRole()
+        {
+            string jsonl = "{\"custom_id\":\"0\",\"result\":{\"type\":\"succeeded\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"input\":{\"roles\":[\"Software Engineer\",\"Software Developer\",\"Backend Engineer\"],\"seniority\":\"Any\"}}]}}}";
+            FakeBatchHandler handler = new FakeBatchHandler(jsonl);
+            BatchProfileBuilderService service = CreateAnthropicService(handler);
+
+            List<BatchProfileResult> results = await service.BuildBatchAsync(new List<string> { "Three software roles" });
+
+            Assert.That(results[0].Profile.Roles, Is.EqualTo(new[]
+            {
+                "Software Engineer",
+                "Software Developer",
+                "Backend Engineer"
+            }));
+        }
+
+        [Test]
+        public async Task BuildBatchAsync_AnthropicProvider_LegacyRoleString_ReturnsSingleRole()
+        {
+            string jsonl = "{\"custom_id\":\"0\",\"result\":{\"type\":\"succeeded\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"input\":{\"role\":\"Backend Engineer\",\"seniority\":\"Any\"}}]}}}";
+            FakeBatchHandler handler = new FakeBatchHandler(jsonl);
+            BatchProfileBuilderService service = CreateAnthropicService(handler);
+
+            List<BatchProfileResult> results = await service.BuildBatchAsync(new List<string> { "Backend engineer" });
+
+            Assert.That(results[0].Profile.Roles, Is.EqualTo(new[] { "Backend Engineer" }));
         }
 
         [Test]
@@ -198,7 +227,7 @@ namespace JobSearchBuilder.Tests
             {
                 ToolCallName = "build_query_profile",
                 ToolCallArguments = @"{
-  ""role"": """ + role + @""",
+  ""roles"": [""" + role + @"""],
   ""seniority"": ""Senior"",
   ""tech_stack"": [""C#"", "".NET""],
   ""remote_terms"": [""Fully Remote""],
@@ -210,7 +239,7 @@ namespace JobSearchBuilder.Tests
 
         private static string CreateSucceededJsonl(string customId, string role)
         {
-            return "{\"custom_id\":\"" + customId + "\",\"result\":{\"type\":\"succeeded\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"input\":{\"role\":\"" + role + "\",\"seniority\":\"Senior\",\"tech_stack\":[\"C#\",\".NET\"],\"remote_terms\":[\"Fully Remote\"],\"timezone_terms\":[\"UTC+1\"],\"exclude_terms\":[\"security clearance\"]}}]}}}";
+            return "{\"custom_id\":\"" + customId + "\",\"result\":{\"type\":\"succeeded\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"input\":{\"roles\":[\"" + role + "\"],\"seniority\":\"Senior\",\"tech_stack\":[\"C#\",\".NET\"],\"remote_terms\":[\"Fully Remote\"],\"timezone_terms\":[\"UTC+1\"],\"exclude_terms\":[\"security clearance\"]}}]}}}";
         }
 
         private class FakeBatchHandler : HttpMessageHandler

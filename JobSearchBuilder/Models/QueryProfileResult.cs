@@ -4,7 +4,7 @@ namespace JobSearchBuilder.Models
 {
     public class QueryProfileResult
     {
-        public string Role { get; set; }
+        public List<string> Roles { get; set; }
         public string Seniority { get; set; }
         public List<string> TechStack { get; set; }
         public List<string> Locations { get; set; }
@@ -15,7 +15,7 @@ namespace JobSearchBuilder.Models
 
         public QueryProfileResult()
         {
-            Role = string.Empty;
+            Roles = new List<string>();
             Seniority = string.Empty;
             TechStack = new List<string>();
             Locations = new List<string>();
