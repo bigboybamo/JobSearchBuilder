@@ -40,6 +40,7 @@ namespace JobSearchBuilder
         private Button _btnReviewQuery;
         private Button _btnDescribeRole;
         private Button _btnBulkDescribe;
+        private Button _btnCopyFrom;
         private Panel _pnlAtsRangeBar;
         private FlowLayoutPanel _flpAtsRangeButtons;
         private bool _suppressAtsGroupChecks;
@@ -128,6 +129,14 @@ namespace JobSearchBuilder
             AddClearAllButton(lblTimezoneHeader, flpTimezone);
             AddClearAllButton(lblExcludeHeader, flpExclude);
 
+            AddChipClipboardMenu(flpStack);
+            AddChipClipboardMenu(flpRoles);
+            AddChipClipboardMenu(flpLocations);
+            AddChipClipboardMenu(flpVisa);
+            AddChipClipboardMenu(flpRemote);
+            AddChipClipboardMenu(flpTimezone);
+            AddChipClipboardMenu(flpExclude, isExclude: true);
+
             // Suggestion buttons for each keyword section
             List<string> stackSugg = new List<string> { "C#", ".NET", "ASP.NET Core", "Azure", "React", "TypeScript", "Python", "Java" };
             List<string> roleSugg = new List<string>(_config.CommonRoles);
@@ -191,6 +200,7 @@ namespace JobSearchBuilder
 
             AddDescribeRoleButton();
             AddBulkDescribeButton();
+            AddCopyFromButton();
             pnlEditor.SizeChanged += (s, e) => LayoutTopActionButtons();
             LayoutTopActionButtons();
 
@@ -389,7 +399,7 @@ namespace JobSearchBuilder
             int right = 12;
             int gap = 8;
             int top = Math.Max(6, (tblTopRow.Height - btnSaveProfile.Height) / 2);
-            int reservedWidth = btnSaveProfile.Width + (2 * gap) + 126 + 126 + 24;
+            int reservedWidth = btnSaveProfile.Width + (3 * gap) + 126 + 126 + 110 + 24;
 
             tblTopRow.Padding = new Padding(4, 4, reservedWidth, 4);
 
@@ -407,6 +417,12 @@ namespace JobSearchBuilder
             {
                 _btnBulkDescribe.Top = top;
                 _btnBulkDescribe.Left = _btnDescribeRole.Left - _btnBulkDescribe.Width - gap;
+            }
+
+            if (_btnCopyFrom != null)
+            {
+                _btnCopyFrom.Top = top;
+                _btnCopyFrom.Left = _btnBulkDescribe.Left - _btnCopyFrom.Width - gap;
             }
         }
 
@@ -650,6 +666,28 @@ namespace JobSearchBuilder
             _btnBulkDescribe.Click += btnBulkDescribe_Click;
             pnlEditor.Controls.Add(_btnBulkDescribe);
             _btnBulkDescribe.BringToFront();
+        }
+
+        private void AddCopyFromButton()
+        {
+            _btnCopyFrom = new Button
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(65, 105, 190),
+                Cursor = Cursors.Hand,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.White,
+                Location = new Point(btnSaveProfile.Left - 384, btnSaveProfile.Top),
+                Name = "btnCopyFrom",
+                Size = new Size(110, 28),
+                TabIndex = 2,
+                Text = "Copy From...",
+                UseVisualStyleBackColor = false
+            };
+            _btnCopyFrom.Click += btnCopyFrom_Click;
+            pnlEditor.Controls.Add(_btnCopyFrom);
+            _btnCopyFrom.BringToFront();
         }
 
         private void AddReviewQueryPanel()
@@ -1130,6 +1168,43 @@ namespace JobSearchBuilder
             timer.Start();
         }
 
+        private void btnCopyFrom_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                List<SearchProfile> sources = _store.GetAll()
+                    .Where(p => p.Id != _workingProfile.Id)
+                    .ToList();
+
+                if (sources.Count == 0)
+                {
+                    MessageBox.Show("There are no other saved profiles to copy chips from.", "Copy From",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                CopyChipsDialogResult choice = ShowCopyChipsDialog(sources);
+                if (choice == null)
+                    return;
+
+                // Copy into the editor rather than the store so the change goes
+                // through the usual dirty / Save workflow.
+                SearchProfile profile = ReadProfileFromUi();
+                ChipCopyResult result = ProfileChipCopier.CopyChips(choice.Source, profile, choice.Categories, choice.Replace);
+                if (!result.HasChanges)
+                    return;
+
+                LoadProfileIntoUi(profile);
+                _isDirty = true;
+                RebuildQuery();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not copy chips.\r\n\r\n" + ex.Message, "Copy From",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private async void btnDescribeRole_Click(object sender, EventArgs e)
         {
             if (_provider == null)
@@ -1468,14 +1543,14 @@ namespace JobSearchBuilder
             if (!string.IsNullOrWhiteSpace(result.Seniority))
                 profile.Seniority = result.Seniority;
 
-            profile.RoleKeywords = CopyTerms(result.Roles);
+            profile.RoleKeywords = ProfileChipCopier.NormalizeTerms(result.Roles);
 
-            profile.StackKeywords = CopyTerms(result.TechStack);
-            profile.LocationFilters = CopyTerms(result.Locations);
-            profile.VisaFilters = CopyTerms(result.VisaTerms);
-            profile.RemoteFilters = CopyTerms(result.RemoteTerms);
-            profile.TimezoneFilters = CopyTerms(result.TimezoneTerms);
-            profile.ExcludeKeywords = CopyTerms(result.ExcludeTerms);
+            profile.StackKeywords = ProfileChipCopier.NormalizeTerms(result.TechStack);
+            profile.LocationFilters = ProfileChipCopier.NormalizeTerms(result.Locations);
+            profile.VisaFilters = ProfileChipCopier.NormalizeTerms(result.VisaTerms);
+            profile.RemoteFilters = ProfileChipCopier.NormalizeTerms(result.RemoteTerms);
+            profile.TimezoneFilters = ProfileChipCopier.NormalizeTerms(result.TimezoneTerms);
+            profile.ExcludeKeywords = ProfileChipCopier.NormalizeTerms(result.ExcludeTerms);
 
             if (saveAsNewProfile)
             {
@@ -1673,23 +1748,43 @@ namespace JobSearchBuilder
                 panel.Controls.Remove(c);
         }
 
-        private static List<string> CopyTerms(IEnumerable<string> terms)
+        /// <summary>
+        /// Right-click menu on a chip panel for copying its chips to the clipboard
+        /// (one per line) and pasting a list back in.
+        /// </summary>
+        private void AddChipClipboardMenu(FlowLayoutPanel chipPanel, bool isExclude = false)
         {
-            List<string> result = new List<string>();
-            if (terms == null)
-                return result;
+            ContextMenuStrip menu = new ContextMenuStrip();
+            ToolStripMenuItem copy = new ToolStripMenuItem("Copy chips");
+            ToolStripMenuItem paste = new ToolStripMenuItem("Paste chips");
 
-            foreach (string term in terms)
+            copy.Click += (s, e) =>
             {
-                string value = (term ?? string.Empty).Trim();
-                if (!string.IsNullOrWhiteSpace(value) &&
-                    !result.Any(x => string.Equals(x, value, StringComparison.OrdinalIgnoreCase)))
-                {
-                    result.Add(value);
-                }
-            }
+                List<string> chips = GetChips(chipPanel);
+                if (chips.Count > 0)
+                    Clipboard.SetText(string.Join(Environment.NewLine, chips));
+            };
 
-            return result;
+            paste.Click += (s, e) =>
+            {
+                List<string> terms = ProfileChipCopier.ParsePastedTerms(Clipboard.GetText());
+                int before = GetChips(chipPanel).Count;
+                foreach (string term in terms)
+                    AddChip(chipPanel, term, isExclude);
+
+                if (GetChips(chipPanel).Count != before)
+                    MarkDirtyAndRebuild();
+            };
+
+            menu.Opening += (s, e) =>
+            {
+                copy.Enabled = GetChips(chipPanel).Count > 0;
+                paste.Enabled = Clipboard.ContainsText();
+            };
+
+            menu.Items.Add(copy);
+            menu.Items.Add(paste);
+            chipPanel.ContextMenuStrip = menu;
         }
 
         private static string BuildAiProfileName(QueryProfileResult result)
@@ -1701,7 +1796,7 @@ namespace JobSearchBuilder
                 parts.Add(result.Seniority.Trim());
             }
 
-            List<string> roles = CopyTerms(result.Roles);
+            List<string> roles = ProfileChipCopier.NormalizeTerms(result.Roles);
             if (roles.Count > 0)
                 parts.Add(roles[0]);
 
@@ -1893,7 +1988,7 @@ namespace JobSearchBuilder
             else
             {
                 QueryProfileResult profile = rowResult.Profile ?? new QueryProfileResult();
-                string roles = string.Join(" / ", CopyTerms(profile.Roles));
+                string roles = string.Join(" / ", ProfileChipCopier.NormalizeTerms(profile.Roles));
                 lblProfile.Text = (profile.Seniority + " " + roles + " - " + string.Join(", ", profile.TechStack.Take(3))).Trim();
                 lblProfile.ForeColor = Color.FromArgb(45, 80, 150);
 
@@ -1989,10 +2084,215 @@ namespace JobSearchBuilder
             }
         }
 
+        private CopyChipsDialogResult ShowCopyChipsDialog(List<SearchProfile> sources)
+        {
+            var categories = new[]
+            {
+                new KeyValuePair<ChipCategory, string>(ChipCategory.Stack, "Tech Stack"),
+                new KeyValuePair<ChipCategory, string>(ChipCategory.Role, "Roles"),
+                new KeyValuePair<ChipCategory, string>(ChipCategory.Location, "Locations"),
+                new KeyValuePair<ChipCategory, string>(ChipCategory.Visa, "Visa Filters"),
+                new KeyValuePair<ChipCategory, string>(ChipCategory.Remote, "Remote / Hybrid"),
+                new KeyValuePair<ChipCategory, string>(ChipCategory.Timezone, "Timezone"),
+                new KeyValuePair<ChipCategory, string>(ChipCategory.Exclude, "Exclude Terms"),
+                new KeyValuePair<ChipCategory, string>(ChipCategory.SourceGroups, "ATS Sources"),
+                new KeyValuePair<ChipCategory, string>(ChipCategory.Seniority, "Seniority")
+            };
+
+            using (Form dialog = new Form())
+            {
+                dialog.Text = "Copy Chips From Profile";
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.Font = new Font("Segoe UI", 9f);
+
+                Label lblSource = new Label { Text = "Copy chips from:", AutoSize = true, Location = new Point(12, 15) };
+                ComboBox cboSource = new ComboBox
+                {
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    Location = new Point(130, 11),
+                    Width = 278
+                };
+                cboSource.Items.AddRange(sources.Cast<object>().ToArray());
+
+                Label lblCategories = new Label
+                {
+                    Text = "Categories",
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    Location = new Point(12, 48)
+                };
+                Label lblPreviewHeader = new Label
+                {
+                    Text = "Preview",
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    Location = new Point(240, 48)
+                };
+
+                dialog.Controls.Add(lblSource);
+                dialog.Controls.Add(cboSource);
+                dialog.Controls.Add(lblCategories);
+                dialog.Controls.Add(lblPreviewHeader);
+
+                List<CheckBox> checkBoxes = new List<CheckBox>();
+                List<Label> previewLabels = new List<Label>();
+                int y = 72;
+                foreach (KeyValuePair<ChipCategory, string> category in categories)
+                {
+                    CheckBox chk = new CheckBox
+                    {
+                        Text = category.Value,
+                        Tag = category.Key,
+                        Checked = (ChipCategory.AllKeywords & category.Key) != 0,
+                        Location = new Point(24, y),
+                        Width = 200
+                    };
+                    Label preview = new Label
+                    {
+                        AutoSize = false,
+                        Location = new Point(240, y + 4),
+                        Size = new Size(168, 20),
+                        ForeColor = Color.FromArgb(100, 100, 120)
+                    };
+
+                    checkBoxes.Add(chk);
+                    previewLabels.Add(preview);
+                    dialog.Controls.Add(chk);
+                    dialog.Controls.Add(preview);
+                    y += 24;
+                }
+
+                RadioButton rdoMerge = new RadioButton
+                {
+                    Text = "Merge - add chips, skip duplicates",
+                    Checked = true,
+                    AutoSize = true,
+                    Location = new Point(12, y + 12)
+                };
+                RadioButton rdoReplace = new RadioButton
+                {
+                    Text = "Replace - clear each selected category first",
+                    AutoSize = true,
+                    Location = new Point(12, y + 36)
+                };
+
+                Button btnOk = new Button
+                {
+                    Text = "Copy Chips",
+                    DialogResult = DialogResult.OK,
+                    Size = new Size(100, 28),
+                    Location = new Point(218, y + 72)
+                };
+                Button btnCancel = new Button
+                {
+                    Text = "Cancel",
+                    DialogResult = DialogResult.Cancel,
+                    Size = new Size(90, 28),
+                    Location = new Point(326, y + 72)
+                };
+
+                dialog.Controls.Add(rdoMerge);
+                dialog.Controls.Add(rdoReplace);
+                dialog.Controls.Add(btnOk);
+                dialog.Controls.Add(btnCancel);
+                dialog.AcceptButton = btnOk;
+                dialog.CancelButton = btnCancel;
+                dialog.ClientSize = new Size(428, y + 112);
+
+                Dictionary<int, SearchProfile> loadedSources = new Dictionary<int, SearchProfile>();
+                Func<SearchProfile> selectedSource = () =>
+                {
+                    SearchProfile item = cboSource.SelectedItem as SearchProfile;
+                    if (item == null)
+                        return null;
+
+                    SearchProfile loaded;
+                    if (!loadedSources.TryGetValue(item.Id, out loaded))
+                    {
+                        loaded = _store.GetById(item.Id) ?? item;
+                        loadedSources[item.Id] = loaded;
+                    }
+                    return loaded;
+                };
+
+                Func<ChipCategory> selectedCategories = () =>
+                {
+                    ChipCategory mask = ChipCategory.None;
+                    foreach (CheckBox chk in checkBoxes)
+                        if (chk.Checked)
+                            mask |= (ChipCategory)chk.Tag;
+                    return mask;
+                };
+
+                Action updatePreview = () =>
+                {
+                    SearchProfile source = selectedSource();
+                    ChipCopyResult result = source == null
+                        ? new ChipCopyResult()
+                        : ProfileChipCopier.CopyChips(source, ReadProfileFromUi(), selectedCategories(), rdoReplace.Checked);
+
+                    for (int i = 0; i < checkBoxes.Count; i++)
+                    {
+                        ChipCategory category = (ChipCategory)checkBoxes[i].Tag;
+                        previewLabels[i].Text = checkBoxes[i].Checked && source != null
+                            ? DescribeCopyPreview(category, source, result)
+                            : string.Empty;
+                    }
+
+                    btnOk.Enabled = result.HasChanges;
+                };
+
+                cboSource.SelectedIndexChanged += (s, e) => updatePreview();
+                rdoReplace.CheckedChanged += (s, e) => updatePreview();
+                foreach (CheckBox chk in checkBoxes)
+                    chk.CheckedChanged += (s, e) => updatePreview();
+
+                cboSource.SelectedIndex = 0;
+
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                    return null;
+
+                return new CopyChipsDialogResult
+                {
+                    Source = selectedSource(),
+                    Categories = selectedCategories(),
+                    Replace = rdoReplace.Checked
+                };
+            }
+        }
+
+        private static string DescribeCopyPreview(ChipCategory category, SearchProfile source, ChipCopyResult result)
+        {
+            if (category == ChipCategory.Seniority)
+                return result.GetAdded(category) > 0 ? "set to " + source.Seniority : "no change";
+
+            int added = result.GetAdded(category);
+            int removed = result.GetRemoved(category);
+            if (added == 0 && removed == 0)
+                return "no change";
+
+            List<string> parts = new List<string>();
+            if (added > 0)
+                parts.Add("+" + added + " new");
+            if (removed > 0)
+                parts.Add(removed + " removed");
+            return string.Join(", ", parts);
+        }
+
         private class DescribeRoleDialogResult
         {
             public string Description { get; set; }
             public bool SaveAsNewProfile { get; set; }
+        }
+
+        private class CopyChipsDialogResult
+        {
+            public SearchProfile Source { get; set; }
+            public ChipCategory Categories { get; set; }
+            public bool Replace { get; set; }
         }
 
         private class AtsRangeButtonInfo

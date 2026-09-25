@@ -187,6 +187,8 @@
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Models\AtsSourceGroup.cs" />
+    <Compile Include="Models\ChipCategory.cs" />
+    <Compile Include="Models\ChipCopyResult.cs" />
     <Compile Include="Models\LlmRequest.cs" />
     <Compile Include="Models\LlmResponse.cs" />
     <Compile Include="Models\LlmToolDefinition.cs" />
@@ -206,6 +208,7 @@
     <Compile Include="Services\InMemoryLlmProvider.cs" />
     <Compile Include="Services\NlProfileBuilderService.cs" />
     <Compile Include="Services\PromptLoader.cs" />
+    <Compile Include="Services\ProfileChipCopier.cs" />
     <Compile Include="Services\QueryProfileToolContract.cs" />
     <Compile Include="Services\QueryReviewService.cs" />
     <Compile Include="Services\QuerySuggestionService.cs" />
