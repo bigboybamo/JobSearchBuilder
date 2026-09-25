@@ -1,6 +1,6 @@
 using JobSearchBuilder.Interfaces;
 using JobSearchBuilder.Models;
-using Newtonsoft.Json.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -9,7 +9,7 @@ namespace JobSearchBuilder.Services
 {
     public class NlProfileBuilderService
     {
-        private const string ToolName = "build_query_profile";
+        private const string ToolName = QueryProfileToolContract.ToolName;
 
         private readonly ILlmProvider _provider;
         private readonly PromptLoader _promptLoader;
@@ -30,7 +30,7 @@ namespace JobSearchBuilder.Services
 
             LlmRequest request = new LlmRequest
             {
-                SystemPrompt = _promptLoader.Load("nl_profile_builder", "v3"),
+                SystemPrompt = _promptLoader.Load("nl_profile_builder", "v4"),
                 UserMessage = description.Trim(),
                 ForceToolName = ToolName,
                 ModelTier = "Balanced",
@@ -41,7 +41,7 @@ namespace JobSearchBuilder.Services
                     {
                         Name = ToolName,
                         Description = "Builds a structured job search profile from a plain English role description.",
-                        InputSchema = GetToolSchema()
+                        InputSchema = QueryProfileToolContract.GetToolSchema()
                     }
                 }
             };
@@ -53,69 +53,9 @@ namespace JobSearchBuilder.Services
             if (!string.Equals(response.ToolCallName, ToolName, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("The LLM provider did not return the expected profile tool result.");
 
-            return ParseResult(response.ToolCallArguments);
+            return QueryProfileToolContract.ParseProfile(response.ToolCallArguments);
         }
 
-        private static QueryProfileResult ParseResult(string argumentsJson)
-        {
-            if (string.IsNullOrWhiteSpace(argumentsJson))
-                throw new InvalidOperationException("The profile tool result was empty.");
 
-            JObject root = JObject.Parse(argumentsJson);
-            QueryProfileResult result = new QueryProfileResult
-            {
-                Role = ReadString(root, "role", "Role"),
-                Seniority = ReadString(root, "seniority", "Seniority"),
-                TechStack = ReadStringList(root, "tech_stack", "TechStack"),
-                Locations = ReadStringList(root, "locations", "Locations"),
-                VisaTerms = ReadStringList(root, "visa_terms", "VisaTerms"),
-                RemoteTerms = ReadStringList(root, "remote_terms", "RemoteTerms"),
-                TimezoneTerms = ReadStringList(root, "timezone_terms", "TimezoneTerms"),
-                ExcludeTerms = ReadStringList(root, "exclude_terms", "ExcludeTerms")
-            };
-
-            return result;
-        }
-
-        private static string ReadString(JObject root, string snakeName, string pascalName)
-        {
-            return (string)root[snakeName] ?? (string)root[pascalName] ?? string.Empty;
-        }
-
-        private static List<string> ReadStringList(JObject root, string snakeName, string pascalName)
-        {
-            List<string> values = new List<string>();
-            JArray array = root[snakeName] as JArray ?? root[pascalName] as JArray;
-            if (array == null)
-                return values;
-
-            foreach (JToken token in array)
-            {
-                string value = ((string)token ?? string.Empty).Trim();
-                if (!string.IsNullOrWhiteSpace(value))
-                    values.Add(value);
-            }
-
-            return values;
-        }
-
-        private static string GetToolSchema()
-        {
-            return @"{
-  ""type"": ""object"",
-  ""properties"": {
-    ""role"": { ""type"": ""string"" },
-    ""seniority"": { ""type"": ""string"" },
-    ""tech_stack"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
-    ""locations"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
-    ""visa_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
-    ""remote_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
-    ""timezone_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
-    ""exclude_terms"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } }
-  },
-  ""required"": [""role"", ""seniority"", ""tech_stack"", ""locations"", ""visa_terms"", ""remote_terms"", ""timezone_terms"", ""exclude_terms""],
-  ""additionalProperties"": false
-}";
-        }
     }
 }

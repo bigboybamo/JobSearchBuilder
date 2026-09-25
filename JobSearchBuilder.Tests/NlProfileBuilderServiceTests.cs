@@ -19,14 +19,14 @@ namespace JobSearchBuilder.Tests
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "JobSearchBuilderTests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(_tempRoot, "nl_profile_builder"));
-            File.WriteAllText(Path.Combine(_tempRoot, "nl_profile_builder", "v3.xml"), "<prompt><instructions>test prompt</instructions></prompt>");
+            File.WriteAllText(Path.Combine(_tempRoot, "nl_profile_builder", "v4.xml"), "<prompt><instructions>test prompt</instructions></prompt>");
 
             _provider = new InMemoryLlmProvider();
             _provider.NextResponse = new LlmResponse
             {
                 ToolCallName = "build_query_profile",
                 ToolCallArguments = @"{
-  ""role"": ""Developer"",
+  ""roles"": [""Developer""],
   ""seniority"": ""Senior"",
   ""tech_stack"": [""C#"", "".NET""],
   ""locations"": [""Berlin"", ""Remote EU""],
@@ -63,6 +63,9 @@ namespace JobSearchBuilder.Tests
             Assert.That(_provider.LastRequest.Tools[0].InputSchema, Does.Contain("tech_stack"));
             Assert.That(_provider.LastRequest.Tools[0].InputSchema, Does.Contain("locations"));
             Assert.That(_provider.LastRequest.Tools[0].InputSchema, Does.Contain("visa_terms"));
+            Newtonsoft.Json.Linq.JObject schema = Newtonsoft.Json.Linq.JObject.Parse(_provider.LastRequest.Tools[0].InputSchema);
+            Assert.That((string)schema.SelectToken("properties.roles.type"), Is.EqualTo("array"));
+            Assert.That(schema.SelectToken("properties.role"), Is.Null);
         }
 
         [Test]
@@ -70,7 +73,7 @@ namespace JobSearchBuilder.Tests
         {
             QueryProfileResult result = await _service.BuildAsync("Senior .NET developer, fully remote");
 
-            Assert.That(result.Role, Is.EqualTo("Developer"));
+            Assert.That(result.Roles, Is.EqualTo(new[] { "Developer" }));
             Assert.That(result.Seniority, Is.EqualTo("Senior"));
             Assert.That(result.TechStack, Is.EqualTo(new[] { "C#", ".NET" }));
             Assert.That(result.Locations, Is.EqualTo(new[] { "Berlin", "Remote EU" }));
@@ -78,6 +81,45 @@ namespace JobSearchBuilder.Tests
             Assert.That(result.RemoteTerms, Is.EqualTo(new[] { "Fully Remote" }));
             Assert.That(result.TimezoneTerms, Is.EqualTo(new[] { "UTC+1" }));
             Assert.That(result.ExcludeTerms, Is.EqualTo(new[] { "security clearance" }));
+        }
+
+        [Test]
+        public async Task BuildAsync_MultipleRoles_ReturnsOneEntryPerRole()
+        {
+            _provider.NextResponse = new LlmResponse
+            {
+                ToolCallName = "build_query_profile",
+                ToolCallArguments = @"{
+  ""roles"": [""Software Engineer"", ""Software Developer"", ""Backend Engineer""],
+  ""seniority"": ""Any""
+}"
+            };
+
+            QueryProfileResult result = await _service.BuildAsync("Software engineer, software developer, or backend engineer");
+
+            Assert.That(result.Roles, Is.EqualTo(new[]
+            {
+                "Software Engineer",
+                "Software Developer",
+                "Backend Engineer"
+            }));
+        }
+
+        [Test]
+        public async Task BuildAsync_LegacyRoleString_ReturnsSingleRole()
+        {
+            _provider.NextResponse = new LlmResponse
+            {
+                ToolCallName = "build_query_profile",
+                ToolCallArguments = @"{
+  ""role"": ""Backend Engineer"",
+  ""seniority"": ""Any""
+}"
+            };
+
+            QueryProfileResult result = await _service.BuildAsync("Backend engineer");
+
+            Assert.That(result.Roles, Is.EqualTo(new[] { "Backend Engineer" }));
         }
 
         [Test]

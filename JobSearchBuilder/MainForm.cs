@@ -1468,9 +1468,7 @@ namespace JobSearchBuilder
             if (!string.IsNullOrWhiteSpace(result.Seniority))
                 profile.Seniority = result.Seniority;
 
-            profile.RoleKeywords = new List<string>();
-            if (!string.IsNullOrWhiteSpace(result.Role))
-                profile.RoleKeywords.Add(result.Role.Trim());
+            profile.RoleKeywords = CopyTerms(result.Roles);
 
             profile.StackKeywords = CopyTerms(result.TechStack);
             profile.LocationFilters = CopyTerms(result.Locations);
@@ -1703,8 +1701,9 @@ namespace JobSearchBuilder
                 parts.Add(result.Seniority.Trim());
             }
 
-            if (!string.IsNullOrWhiteSpace(result.Role))
-                parts.Add(result.Role.Trim());
+            List<string> roles = CopyTerms(result.Roles);
+            if (roles.Count > 0)
+                parts.Add(roles[0]);
 
             string name = parts.Count > 0 ? string.Join(" ", parts) : "AI Profile";
             return name + " (AI)";
@@ -1894,7 +1893,8 @@ namespace JobSearchBuilder
             else
             {
                 QueryProfileResult profile = rowResult.Profile ?? new QueryProfileResult();
-                lblProfile.Text = (profile.Seniority + " " + profile.Role + " - " + string.Join(", ", profile.TechStack.Take(3))).Trim();
+                string roles = string.Join(" / ", CopyTerms(profile.Roles));
+                lblProfile.Text = (profile.Seniority + " " + roles + " - " + string.Join(", ", profile.TechStack.Take(3))).Trim();
                 lblProfile.ForeColor = Color.FromArgb(45, 80, 150);
 
                 Button btnApply = CreateBatchActionButton("Apply", Color.FromArgb(65, 105, 190), new Point(498, 10), new Size(70, 26));

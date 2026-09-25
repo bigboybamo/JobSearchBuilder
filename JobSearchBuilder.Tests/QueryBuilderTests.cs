@@ -185,9 +185,30 @@ namespace JobSearchBuilder.Tests
             Assert.That(result.RawQuery, Does.Contain("\"Software Engineer\""));
         }
 
+        [Test]
+        public void Build_MultipleRoleKeywords_ProducesSeparateOrPhrases()
+        {
+            // Arrange
+            SearchProfile profile = new SearchProfile
+            {
+                RoleKeywords = new List<string>
+                {
+                    "Software Engineer",
+                    "Software Developer",
+                    "Backend Engineer"
+                }
+            };
+
+            // Act
+            QueryResult result = _builder.Build(profile);
+
+            // Assert
+            Assert.That(result.RawQuery, Is.EqualTo("(\"Software Engineer\" OR \"Software Developer\" OR \"Backend Engineer\")"));
+        }
+
+        [TestCase("OR")]
         [TestCase("C++")]
         [TestCase("full-stack")]
-        [TestCase("OR")]
         [TestCase("Developer(C#)")]
         [TestCase("Node.js")]
         [TestCase("A OR B")]
