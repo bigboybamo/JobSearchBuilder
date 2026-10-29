@@ -29,6 +29,9 @@ namespace JobSearchBuilder.Services.Providers
         {
             if (request == null) throw new ArgumentNullException("request");
 
+            string modelId = _settings.Ai.GetModelId("Anthropic", request.ModelTier);
+            bool usesAutoToolChoice = UsesAutoToolChoice(modelId);
+
             JObject systemBlock = new JObject
             {
                 ["type"] = "text",
@@ -53,18 +56,27 @@ namespace JobSearchBuilder.Services.Providers
                         schema = new JObject();
                     }
 
-                    tools.Add(new JObject
+                    JObject toolDefinition = new JObject
                     {
                         ["name"] = tool.Name ?? string.Empty,
                         ["description"] = tool.Description ?? string.Empty,
                         ["input_schema"] = schema
-                    });
+                    };
+
+                    if (usesAutoToolChoice &&
+                        !string.IsNullOrWhiteSpace(request.ForceToolName) &&
+                        string.Equals(tool.Name, request.ForceToolName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        toolDefinition["strict"] = true;
+                    }
+
+                    tools.Add(toolDefinition);
                 }
             }
 
             JObject payload = new JObject
             {
-                ["model"] = _settings.Ai.GetModelId("Anthropic", request.ModelTier),
+                ["model"] = modelId,
                 ["max_tokens"] = 2048,
                 ["system"] = new JArray { systemBlock },
                 ["messages"] = new JArray
@@ -82,11 +94,18 @@ namespace JobSearchBuilder.Services.Providers
 
             if (!string.IsNullOrWhiteSpace(request.ForceToolName))
             {
-                payload["tool_choice"] = new JObject
+                if (usesAutoToolChoice)
                 {
-                    ["type"] = "tool",
-                    ["name"] = request.ForceToolName
-                };
+                    payload["tool_choice"] = new JObject { ["type"] = "auto" };
+                }
+                else
+                {
+                    payload["tool_choice"] = new JObject
+                    {
+                        ["type"] = "tool",
+                        ["name"] = request.ForceToolName
+                    };
+                }
             }
 
             HttpRequestMessage httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.anthropic.com/v1/messages");
@@ -136,6 +155,12 @@ namespace JobSearchBuilder.Services.Providers
                 Debug.WriteLine("Anthropic cache write tokens: " + mapped.CacheWriteTokens);
 
             return mapped;
+        }
+
+        private static bool UsesAutoToolChoice(string modelId)
+        {
+            return !string.IsNullOrWhiteSpace(modelId) &&
+                   modelId.StartsWith("claude-sonnet-5-5", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

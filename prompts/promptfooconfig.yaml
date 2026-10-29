@@ -9,9 +9,9 @@ prompts:
   - file://nl_profile_builder/messages.yaml
 
 providers:
-  - id: anthropic:messages:claude-sonnet-4-5-20250929
+  - id: anthropic:messages:claude-sonnet-5-5
     label: anthropic
-  - id: openai:chat:gpt-4.1-mini
+  - id: openai:chat:gpt-5.4-mini-2026-03-17
     label: openai
 
 # Cheap fast model used only for llm-rubric grading — not the model under test

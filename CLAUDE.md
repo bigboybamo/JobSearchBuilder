@@ -305,8 +305,8 @@ Model strings are configured in `appsettings.json` under `Ai.Models[provider].Ba
 "Ai": {
   "Provider": "Anthropic",
   "Models": {
-    "Anthropic": { "Balanced": "claude-sonnet-4-5-20250929" },
-    "OpenAI":    { "Balanced": "gpt-4.1-mini" },
+    "Anthropic": { "Balanced": "claude-sonnet-5-5" },
+    "OpenAI":    { "Balanced": "gpt-5.4-mini-2026-03-17" },
     "Gemini":    { "Balanced": "gemini-2.5-flash" }
   }
 }
