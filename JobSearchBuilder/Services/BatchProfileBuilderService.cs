@@ -144,15 +144,40 @@ namespace JobSearchBuilder.Services
             string prompt = _promptLoader.Load("nl_profile_builder", "v4");
             JObject schema = JObject.Parse(QueryProfileToolContract.GetToolSchema());
             JArray requests = new JArray();
+            string modelId = _settings.Ai.GetModelId("Anthropic", "Balanced");
+            bool usesAutoToolChoice = !string.IsNullOrWhiteSpace(modelId) &&
+                                      modelId.StartsWith("claude-sonnet-5-5", StringComparison.OrdinalIgnoreCase);
 
             for (int i = 0; i < descriptions.Count; i++)
             {
+                JObject toolDefinition = new JObject
+                {
+                    ["name"] = ToolName,
+                    ["description"] = "Builds a structured job search profile from a plain English role description.",
+                    ["input_schema"] = schema
+                };
+
+                JObject toolChoice;
+                if (usesAutoToolChoice)
+                {
+                    toolDefinition["strict"] = true;
+                    toolChoice = new JObject { ["type"] = "auto" };
+                }
+                else
+                {
+                    toolChoice = new JObject
+                    {
+                        ["type"] = "tool",
+                        ["name"] = ToolName
+                    };
+                }
+
                 requests.Add(new JObject
                 {
                     ["custom_id"] = i.ToString(),
                     ["params"] = new JObject
                     {
-                        ["model"] = _settings.Ai.GetModelId("Anthropic", "Balanced"),
+                        ["model"] = modelId,
                         ["max_tokens"] = 2048,
                         ["system"] = new JArray
                         {
@@ -173,18 +198,9 @@ namespace JobSearchBuilder.Services
                         },
                         ["tools"] = new JArray
                         {
-                            new JObject
-                            {
-                                ["name"] = ToolName,
-                                ["description"] = "Builds a structured job search profile from a plain English role description.",
-                                ["input_schema"] = schema
-                            }
+                            toolDefinition
                         },
-                        ["tool_choice"] = new JObject
-                        {
-                            ["type"] = "tool",
-                            ["name"] = ToolName
-                        }
+                        ["tool_choice"] = toolChoice
                     }
                 });
             }

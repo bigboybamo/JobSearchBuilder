@@ -109,11 +109,11 @@ namespace JobSearchBuilder.Tests
 
             await service.BuildBatchAsync(new List<string> { "Engineer" });
 
-            Assert.That(handler.LastBatchRequestBody, Does.Contain("claude-sonnet-4-5-20250929"));
+            Assert.That(handler.LastBatchRequestBody, Does.Contain("claude-sonnet-5-5"));
         }
 
         [Test]
-        public async Task BuildBatchAsync_AnthropicProvider_ForcesBuildQueryProfileTool()
+        public async Task BuildBatchAsync_AnthropicProvider_UsesAutoStrictBuildQueryProfileTool()
         {
             FakeBatchHandler handler = new FakeBatchHandler(CreateSucceededJsonl("0", "Engineer"));
             BatchProfileBuilderService service = CreateAnthropicService(handler);
@@ -121,7 +121,8 @@ namespace JobSearchBuilder.Tests
             await service.BuildBatchAsync(new List<string> { "Engineer" });
 
             Assert.That(handler.LastBatchRequestBody, Does.Contain("build_query_profile"));
-            Assert.That(handler.LastBatchRequestBody, Does.Contain("\"type\":\"tool\""));
+            Assert.That(handler.LastBatchRequestBody, Does.Contain("\"tool_choice\":{\"type\":\"auto\"}"));
+            Assert.That(handler.LastBatchRequestBody, Does.Contain("\"strict\":true"));
         }
 
         [Test]
@@ -209,7 +210,7 @@ namespace JobSearchBuilder.Tests
                             "Anthropic",
                             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                             {
-                                { "Balanced", "claude-sonnet-4-5-20250929" }
+                                { "Balanced", "claude-sonnet-5-5" }
                             }
                         }
                     },

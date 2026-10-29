@@ -27,7 +27,7 @@ namespace JobSearchBuilder.Tests
                         {
                             "Anthropic", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                             {
-                                { "Balanced", "claude-sonnet-4-5-20250929" }
+                                { "Balanced", "claude-sonnet-5-5" }
                             }
                         }
                     },
@@ -139,6 +139,37 @@ namespace JobSearchBuilder.Tests
 
             // Assert
             Assert.That(handler.LastRequestBody, Does.Not.Contain("cache_control"));
+        }
+
+        [Test]
+        public async Task SendAsync_Sonnet55RequestedTool_UsesAutoStrictToolChoice()
+        {
+            // Arrange
+            FakeCapturingHandler handler = new FakeCapturingHandler("{\"content\":[]}");
+            AnthropicProvider provider = new AnthropicProvider(CreateSettings(), handler);
+
+            // Act
+            await provider.SendAsync(new LlmRequest
+            {
+                ModelTier = "Balanced",
+                SystemPrompt = "Always call the build_query_profile tool.",
+                UserMessage = "Senior developer",
+                ForceToolName = "build_query_profile",
+                Tools = new List<LlmToolDefinition>
+                {
+                    new LlmToolDefinition
+                    {
+                        Name = "build_query_profile",
+                        Description = "Builds a profile.",
+                        InputSchema = "{\"type\":\"object\"}"
+                    }
+                }
+            });
+
+            // Assert
+            Assert.That(handler.LastRequestBody, Does.Contain("\"tool_choice\":{\"type\":\"auto\"}"));
+            Assert.That(handler.LastRequestBody, Does.Contain("\"strict\":true"));
+            Assert.That(handler.LastRequestBody, Does.Not.Contain("\"tool_choice\":{\"type\":\"tool\""));
         }
 
         private class FakeHandler : HttpMessageHandler
