@@ -152,6 +152,29 @@ No code changes required — the app reads the groups at startup.
 
 ---
 
+## Logs
+
+The app writes structured logs (one JSON object per entry, each followed by a line of underscores) to one file per day, for example `applog_12_02_26.log` for 12 February 2026:
+
+```
+%LOCALAPPDATA%\JobSearchBuilder\logs\applog_dd_MM_yy.log
+```
+
+Paste that path into File Explorer to open it. Logs record startup and shutdown, AI provider selection, Describe Role, Bulk Describe, Review Query, profile database operations, country loading, and unhandled exceptions.
+
+Configure logging in `appsettings.json` under `Logging`:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `MinimumLevel` | `Information` | `Debug`, `Information`, `Warning`, `Error`, or `Critical` |
+| `Directory` | empty | Log folder; empty uses the path above |
+| `MaxFileSizeKb` | `1024` | A day's file rolls to `applog_dd_MM_yy.1.log` at this size, replacing any earlier overflow file for that day |
+| `RetainedFileCount` | `5` | Previous days' logs to keep, not counting today; older days are deleted |
+
+Logs never include role descriptions, prompts, or provider response bodies. API keys, authorization headers, and connection string values are redacted.
+
+---
+
 ## Running the tests
 
 ```powershell

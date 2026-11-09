@@ -59,15 +59,16 @@ namespace JobSearchBuilder
         public MainForm()
         {
             _config = AppSettingsLoader.Load();
-            _store = new SqlProfileStore(new SqlConnectionFactory(_config.ConnectionString));
+            _store = new LoggingProfileStore(new SqlProfileStore(new SqlConnectionFactory(_config.ConnectionString)));
             _queryBuilder = new QueryBuilder(_config.AtsSourceGroups);
             try
             {
                 _provider = LlmProviderFactory.Create(_config);
+                AppLog.Info("AI", "ProviderSelection", "Active provider: " + DescribeProvider(_provider));
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("AI provider init failed: " + ex.Message);
+                AppLog.Error("AI", "ProviderSelection", "AI provider init failed.", ex);
                 _provider = null;
             }
             _workingProfile = new SearchProfile();
@@ -252,10 +253,11 @@ namespace JobSearchBuilder
                 {
                     _provider = LlmProviderFactory.Create(_config, selected);
                     _lblModelId.Text = _provider.ModelId;
+                    AppLog.Info("AI", "ProviderSelection", "Switched provider: " + DescribeProvider(_provider));
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine("Provider switch failed: " + ex.Message);
+                    AppLog.Error("AI", "ProviderSelection", "Provider switch to " + selected + " failed.", ex);
                     _provider = null;
                     _lblModelId.Text = "unavailable";
                 }
@@ -723,6 +725,7 @@ namespace JobSearchBuilder
 
         private async void LoadCountriesAsync()
         {
+            AppLog.Info("Countries", "LoadCountries", "Started.");
             try
             {
                 List<string> countries = await Task.Run(() => new CountryService().GetCountries());
@@ -732,9 +735,11 @@ namespace JobSearchBuilder
                 _cboLocationPicker.AutoCompleteCustomSource = source;
 
                 _cboLocationPicker.Items.AddRange(countries.ToArray());
+                AppLog.Info("Countries", "LoadCountries", "Completed. Count: " + countries.Count);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Warning("Countries", "LoadCountries", "Failed; location picker has no country list.", ex);
                 // Fall back silently — user can still type a location manually
             }
         }
@@ -891,7 +896,7 @@ namespace JobSearchBuilder
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Suggestion fetch failed: " + ex.Message);
+                AppLog.Warning("AI", "QuerySuggestions", "Suggestion fetch failed.", ex);
             }
         }
 
@@ -1200,15 +1205,22 @@ namespace JobSearchBuilder
             }
             catch (Exception ex)
             {
+                AppLog.Error("Profiles", "CopyChips", "Could not copy chips.", ex);
                 MessageBox.Show("Could not copy chips.\r\n\r\n" + ex.Message, "Copy From",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private static string DescribeProvider(ILlmProvider provider)
+        {
+            return provider.ProviderName + " / " + provider.ModelId;
         }
 
         private async void btnDescribeRole_Click(object sender, EventArgs e)
         {
             if (_provider == null)
             {
+                AppLog.Warning("AI", "DescribeRole", "Skipped: AI provider is unavailable.");
                 MessageBox.Show("AI provider is unavailable. Check your provider settings and API key.", "Describe Role",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -1225,14 +1237,19 @@ namespace JobSearchBuilder
             Cursor previousCursor = Cursor.Current;
             Cursor.Current = Cursors.WaitCursor;
 
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            AppLog.Info("AI", "DescribeRole", "Started. Provider: " + DescribeProvider(_provider));
+
             try
             {
                 NlProfileBuilderService service = new NlProfileBuilderService(_provider, _promptLoader);
                 QueryProfileResult result = await service.BuildAsync(dialogResult.Description);
                 ApplyQueryProfileResult(result, dialogResult.SaveAsNewProfile);
+                AppLog.Info("AI", "DescribeRole", "Completed in " + stopwatch.ElapsedMilliseconds + " ms.");
             }
             catch (Exception ex)
             {
+                AppLog.Error("AI", "DescribeRole", "Failed after " + stopwatch.ElapsedMilliseconds + " ms.", ex);
                 MessageBox.Show("Could not build a profile from that description.\r\n\r\n" + ex.Message,
                     "Describe Role", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -1248,6 +1265,7 @@ namespace JobSearchBuilder
         {
             if (_provider == null)
             {
+                AppLog.Warning("AI", "BulkDescribe", "Skipped: AI provider is unavailable.");
                 MessageBox.Show("AI provider is unavailable. Check your provider settings and API key.", "Bulk Describe",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -1273,14 +1291,20 @@ namespace JobSearchBuilder
             Cursor previousCursor = Cursor.Current;
             Cursor.Current = Cursors.WaitCursor;
 
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            AppLog.Info("AI", "BulkDescribe", "Started. Items: " + descriptions.Count + ". Provider: " + DescribeProvider(_provider));
+
             try
             {
                 BatchProfileBuilderService service = new BatchProfileBuilderService(_provider, _promptLoader, _config);
                 List<BatchProfileResult> results = await service.BuildBatchAsync(descriptions);
+                AppLog.Info("AI", "BulkDescribe", "Completed in " + stopwatch.ElapsedMilliseconds + " ms. Items: "
+                    + results.Count + ", failed: " + results.Count(r => r.IsError));
                 ShowBatchResultsDialog(results);
             }
             catch (Exception ex)
             {
+                AppLog.Error("AI", "BulkDescribe", "Failed after " + stopwatch.ElapsedMilliseconds + " ms.", ex);
                 MessageBox.Show("Could not build profiles from those descriptions.\r\n\r\n" + ex.Message,
                     "Bulk Describe", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -1296,6 +1320,7 @@ namespace JobSearchBuilder
         {
             if (_provider == null)
             {
+                AppLog.Warning("AI", "ReviewQuery", "Skipped: AI provider is unavailable.");
                 MessageBox.Show("AI provider is unavailable. Check your provider settings and API key.",
                     "Review Query", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -1308,15 +1333,23 @@ namespace JobSearchBuilder
             Cursor previousCursor = Cursor.Current;
             Cursor.Current = Cursors.WaitCursor;
 
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            AppLog.Info("AI", "ReviewQuery", "Started. Provider: " + DescribeProvider(_provider));
+
             try
             {
                 QueryReviewService service = new QueryReviewService(_provider, _promptLoader);
                 QueryReviewResult result = await service.ReviewAsync(_lastQueryResult.RawQuery);
+                if (result == null || result.Failed)
+                    AppLog.Error("AI", "ReviewQuery", "Failed after " + stopwatch.ElapsedMilliseconds + " ms.");
+                else
+                    AppLog.Info("AI", "ReviewQuery", "Completed in " + stopwatch.ElapsedMilliseconds + " ms. Issues: "
+                        + (result.Issues == null ? 0 : result.Issues.Count));
                 ShowReviewResult(result);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Query review failed: " + ex.Message);
+                AppLog.Error("AI", "ReviewQuery", "Failed after " + stopwatch.ElapsedMilliseconds + " ms.", ex);
                 ShowReviewResult(new QueryReviewResult
                 {
                     Failed = true,

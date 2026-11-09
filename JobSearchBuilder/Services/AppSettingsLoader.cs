@@ -1,4 +1,5 @@
 using JobSearchBuilder.Models;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -69,6 +70,73 @@ namespace JobSearchBuilder.Services
             settings.Ai = ReadAiSettings(root);
 
             return settings;
+        }
+
+        /// <summary>
+        /// Reads only the logging section, before the rest of the app starts, so
+        /// that a broken appsettings.json can itself be logged. Falls back to defaults.
+        /// </summary>
+        public static LoggingSettings LoadLoggingSettings()
+        {
+            try
+            {
+                return File.Exists(SettingsPath)
+                    ? ParseLoggingSettings(File.ReadAllText(SettingsPath))
+                    : new LoggingSettings();
+            }
+            catch (IOException)
+            {
+                return new LoggingSettings();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return new LoggingSettings();
+            }
+        }
+
+        public static LoggingSettings ParseLoggingSettings(string json)
+        {
+            LoggingSettings settings = new LoggingSettings();
+
+            JObject root;
+            try
+            {
+                root = JObject.Parse(json ?? string.Empty);
+            }
+            catch (JsonException)
+            {
+                return settings;
+            }
+
+            JObject node = root["Logging"] as JObject;
+            if (node == null)
+                return settings;
+
+            LogLevel level;
+            JToken levelToken = node["MinimumLevel"];
+            if (levelToken != null && levelToken.Type == JTokenType.String
+                && Enum.TryParse((string)levelToken, true, out level) && Enum.IsDefined(typeof(LogLevel), level))
+            {
+                settings.MinimumLevel = level;
+            }
+
+            JToken directoryToken = node["Directory"];
+            if (directoryToken != null && directoryToken.Type == JTokenType.String)
+                settings.Directory = (string)directoryToken;
+
+            settings.MaxFileSizeKb = ReadInt(node, "MaxFileSizeKb", 1, settings.MaxFileSizeKb);
+            settings.RetainedFileCount = ReadInt(node, "RetainedFileCount", 0, settings.RetainedFileCount);
+            return settings;
+        }
+
+        private static int ReadInt(JObject node, string key, int minimum, int fallback)
+        {
+            JToken token = node[key];
+            if (token == null || token.Type != JTokenType.Integer)
+                return fallback;
+
+            long value = (long)token;
+            return value >= minimum && value <= int.MaxValue ? (int)value : fallback;
         }
 
         private static AiSettings ReadAiSettings(JObject root)
@@ -208,6 +276,36 @@ namespace JobSearchBuilder.Services
             CommonExcludeTerms = new List<string>();
             CommonTimezoneTerms = new List<string>();
             Ai = new AiSettings();
+        }
+    }
+
+    public class LoggingSettings
+    {
+        public LogLevel MinimumLevel { get; set; }
+        public string Directory { get; set; }
+        public int MaxFileSizeKb { get; set; }
+        public int RetainedFileCount { get; set; }
+
+        public LoggingSettings()
+        {
+            MinimumLevel = LogLevel.Information;
+            Directory = string.Empty;
+            MaxFileSizeKb = 1024;
+            RetainedFileCount = 5;
+        }
+
+        /// <summary>
+        /// Defaults to per-user app data because the install folder is not writable.
+        /// </summary>
+        public string ResolveDirectory()
+        {
+            if (!string.IsNullOrWhiteSpace(Directory))
+                return Environment.ExpandEnvironmentVariables(Directory);
+
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "JobSearchBuilder",
+                "logs");
         }
     }
 
