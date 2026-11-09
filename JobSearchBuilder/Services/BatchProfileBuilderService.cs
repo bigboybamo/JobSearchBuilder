@@ -79,6 +79,7 @@ namespace JobSearchBuilder.Services
             }
             catch (Exception ex)
             {
+                AppLog.Warning("AI", "BulkDescribe", "One batch item failed.", ex);
                 return new BatchProfileResult
                 {
                     Description = description,
@@ -248,6 +249,7 @@ namespace JobSearchBuilder.Services
                     }
                     catch (Exception ex)
                     {
+                        AppLog.Warning("AI", "BulkDescribe", "Could not parse batch result " + index + ".", ex);
                         results[index] = new BatchProfileResult
                         {
                             Description = descriptions[index],

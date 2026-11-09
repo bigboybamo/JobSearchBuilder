@@ -2,7 +2,6 @@ using JobSearchBuilder.Models;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using System.Linq;
 
 namespace JobSearchBuilder.Services
@@ -122,8 +121,8 @@ namespace JobSearchBuilder.Services
                                     // Unknown category: the row cannot be mapped to a chip
                                     // section, so it is dropped — but say so rather than
                                     // losing it silently.
-                                    Debug.WriteLine("SqlProfileStore: unknown keyword category '" + category
-                                        + "' on profile " + profileId + " (keyword '" + keyword + "') — row ignored.");
+                                    AppLog.Warning("ProfileStore", "LoadProfiles", "Unknown keyword category '" + category
+                                        + "' on profile " + profileId + " — row ignored.");
                                     break;
                             }
                         }

@@ -44,6 +44,7 @@ namespace JobSearchBuilder.Services
             }
             catch (Exception ex)
             {
+                AppLog.Error("AI", "ReviewQuery", "Query review request failed.", ex);
                 return CreateFailedResult(ex.Message);
             }
         }

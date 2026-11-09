@@ -164,6 +164,7 @@ No SQL Server needed — tests use SQLite.
 - `ConnectionString` — SQL Server connection string (defaults to `.\SQLEXPRESS`)
 - `AtsSourceGroups` — array of ATS platform groups (id, name, domains)
 - `Defaults` — suggestion lists for seniority, roles, visa terms, remote terms, locations, exclude terms, timezone terms
+- `Logging` — `MinimumLevel`, `Directory`, `MaxFileSizeKb`, `RetainedFileCount`. Logs default to one file per day at `%LOCALAPPDATA%\JobSearchBuilder\logs\applog_dd_MM_yy.log`
 
 **appsettings.local.json** — gitignored, can override `ConnectionString` for local dev.
 
@@ -238,7 +239,8 @@ Steps: NuGet restore → dotnet restore → build test project → run tests.
 ### Never do
 - Introduce EF Core — the project uses raw ADO.NET by design
 - Add `async Task` return type to WinForms event handlers — use `async void` (WinForms standard)
-- Use `Console.WriteLine` for logging — use `Debug.WriteLine` for diagnostics or surface errors via `MessageBox`
+- Use `Console.WriteLine` for logging — use `AppLog` for operational events, `Debug.WriteLine` for development-only diagnostics, and `MessageBox` to surface errors
+- Log API keys, connection strings, authorization headers, full prompts, user role descriptions, profile content, or raw provider response bodies
 - Leave `TODO` comments in committed code
 - Add NuGet packages without confirming they target `net472`/`net48`
 
